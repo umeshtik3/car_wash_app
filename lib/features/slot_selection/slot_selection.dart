@@ -196,7 +196,7 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
                           AppButton(
                             label: 'Continue',
                             primary: true,
-                            onPressed: (_selectedDate != null && _selectedTime != null) ? () => Navigator.of(context).pushNamed('/dashboard') : null,
+                            onPressed: (_selectedDate != null && _selectedTime != null) ? () => Navigator.of(context).pushNamed('/payment') : null,
                           ),
                         ],
                       ),

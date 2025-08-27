@@ -6,6 +6,8 @@ import 'package:car_wash_app/features/profile/profile_setup.dart';
 import 'package:car_wash_app/features/profile/car_details.dart';
 import 'package:car_wash_app/features/dashboard/dashboard.dart';
 import 'package:car_wash_app/features/slot_selection/slot_selection.dart';
+import 'package:car_wash_app/features/payment/payment.dart';
+import 'package:car_wash_app/features/payment/confirmation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,6 +31,8 @@ class MyApp extends StatelessWidget {
         '/car-details': (_) => const CarDetailsPage(),
         '/dashboard': (_) => const DashboardPage(),
         '/slot-selection': (_) => const SlotSelectionPage(),
+        '/payment': (_) => const PaymentPage(),
+        '/confirmation': (_) => const ConfirmationPage(),
       },
     );
   }
