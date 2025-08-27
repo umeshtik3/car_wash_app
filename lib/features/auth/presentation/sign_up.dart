@@ -71,9 +71,8 @@ class _SignUpPageState extends State<SignUpPage> {
     if (!mounted) return;
     setState(() { _loading = false; });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign up success (demo)')),
-    );
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/profile-setup');
   }
 
   @override
@@ -146,7 +145,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         children: [
                           Text('Already have an account?', style: context.text.bodySmall),
                           const SizedBox(width: AppSpacing.sm),
-                          AppButton(label: 'Login', primary: false, onPressed: () {}),
+                          AppButton(label: 'Login', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/login')),
                         ],
                       )
                     ],

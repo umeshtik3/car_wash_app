@@ -71,9 +71,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     if (!mounted) return;
     setState(() { _loading = false; });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Car details saved (demo)')),
-    );
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/dashboard');
   }
 
   @override
@@ -139,11 +138,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                         onPressed: _submit,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      AppButton(
-                        label: 'Skip for now',
-                        primary: false,
-                        onPressed: () {},
-                      ),
+                      AppButton(label: 'Skip for now', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/dashboard')),
                     ],
                   ),
                 ),

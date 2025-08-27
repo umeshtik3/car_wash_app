@@ -49,11 +49,8 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
     setState(() { _loading = false; });
 
-    // For static flow, navigate to a placeholder route name 'dashboard'
-    // Replace with real navigation later.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Login successful (demo)')),
-    );
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/dashboard');
   }
 
   @override
@@ -116,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                         children: [
                           Text("Don't have an account?", style: context.text.bodySmall),
                           const SizedBox(width: AppSpacing.sm),
-                          AppButton(label: 'Sign up', primary: false, onPressed: () {}),
+                          AppButton(label: 'Sign up', primary: false, onPressed: () => Navigator.of(context).pushNamed('/signup')),
                         ],
                       )
                     ],

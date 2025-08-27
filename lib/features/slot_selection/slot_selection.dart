@@ -192,11 +192,11 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          AppButton(label: 'Back', primary: false, onPressed: () {}),
+                          AppButton(label: 'Back', primary: false, onPressed: () => Navigator.of(context).pop()),
                           AppButton(
                             label: 'Continue',
                             primary: true,
-                            onPressed: (_selectedDate != null && _selectedTime != null) ? () {} : null,
+                            onPressed: (_selectedDate != null && _selectedTime != null) ? () => Navigator.of(context).pushNamed('/dashboard') : null,
                           ),
                         ],
                       ),

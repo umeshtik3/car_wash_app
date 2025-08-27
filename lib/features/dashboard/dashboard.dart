@@ -126,8 +126,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          AppButton(label: 'Log out', primary: false, onPressed: () {}),
-                          AppButton(label: 'Proceed to Booking', primary: true, onPressed: _selected.isEmpty ? null : () {}),
+                          AppButton(label: 'Log out', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/login')),
+                          AppButton(label: 'Proceed to Booking', primary: true, onPressed: _selected.isEmpty ? null : () => Navigator.of(context).pushNamed('/slot-selection')),
                         ],
                       ),
                     ],

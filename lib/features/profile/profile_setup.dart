@@ -63,9 +63,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     if (!mounted) return;
     setState(() { _loading = false; });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile saved (demo)')),
-    );
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/car-details');
   }
 
   @override
@@ -134,11 +133,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         onPressed: _submit,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      AppButton(
-                        label: 'Skip for now',
-                        primary: false,
-                        onPressed: () {},
-                      ),
+                      AppButton(label: 'Skip for now', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/car-details')),
                     ],
                   ),
                 ),
