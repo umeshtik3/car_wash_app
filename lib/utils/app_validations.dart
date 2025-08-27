@@ -54,7 +54,7 @@ class AppValidations {
 
   static String? validateModel(String? value) {
     final String v = (value ?? '').trim();
-    if (v.isEmpty || v.length < 1) {
+    if (v.isEmpty || v.isEmpty) {
       return 'Enter model';
     }
     return null;

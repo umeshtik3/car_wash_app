@@ -151,7 +151,7 @@ class _PayMethodTile extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: AppRadii.medium,
           border: Border.all(color: selected ? AppColors.primary : Theme.of(context).dividerColor),
-          boxShadow: selected ? <BoxShadow>[BoxShadow(color: AppColors.primary.withOpacity(0.06), spreadRadius: 2)] : AppShadows.small,
+          boxShadow: selected ? <BoxShadow>[BoxShadow(color: AppColors.primary.withValues(alpha:0.06), spreadRadius: 2)] : AppShadows.small,
         ),
         child: Row(
           children: [

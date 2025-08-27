@@ -177,7 +177,7 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
                                 side: BorderSide(color: selected ? AppColors.primary : Theme.of(context).dividerColor),
                                 shape: RoundedRectangleBorder(borderRadius: AppRadii.small),
                                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                                backgroundColor: selected ? AppColors.primary.withOpacity(0.02) : null,
+                                backgroundColor: selected ? AppColors.primary.withValues(alpha:0.02) : null,
                               ),
                               child: Text(t, style: TextStyle(color: disabled ? Theme.of(context).disabledColor : null)),
                             );
