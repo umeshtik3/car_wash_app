@@ -88,7 +88,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             crossAxisCount: 2,
                             mainAxisSpacing: AppSpacing.md,
                             crossAxisSpacing: AppSpacing.md,
-                            childAspectRatio: 1.4,
+                            childAspectRatio: 1,
                           ),
                           itemCount: _services.length,
                           itemBuilder: (BuildContext context, int index) {
