@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/features/auth/presentation/login_page.dart';
 import 'package:car_wash_app/features/auth/presentation/sign_up.dart';
@@ -9,7 +10,9 @@ import 'package:car_wash_app/features/slot_selection/slot_selection.dart';
 import 'package:car_wash_app/features/payment/payment.dart';
 import 'package:car_wash_app/features/payment/confirmation.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
