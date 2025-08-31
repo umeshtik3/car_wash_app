@@ -45,6 +45,7 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: ThemeMode.system,
+            home: authProvider.isAuthenticated ? const DashboardPage() : const LoginPage(),
             initialRoute: authProvider.isAuthenticated ? '/dashboard' : '/login',
             routes: <String, WidgetBuilder>{
               '/login': (_) => const LoginPage(),

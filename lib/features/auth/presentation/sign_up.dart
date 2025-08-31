@@ -99,6 +99,7 @@ class _SignUpPageState extends State<SignUpPage> {
       Navigator.of(context).pushReplacementNamed('/profile-setup');
       
     } catch (e) {
+      print(e);
       if (!mounted) return;
       
       // Show error message
