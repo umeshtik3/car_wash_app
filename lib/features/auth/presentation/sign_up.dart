@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/utils/app_validations.dart';
+import 'package:car_wash_app/services/firebase_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -21,6 +22,8 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _passwordError;
   String? _confirmError;
   bool _loading = false;
+
+  final FirebaseService _firebaseService = FirebaseService();
 
   @override
   void dispose() {
@@ -67,12 +70,49 @@ class _SignUpPageState extends State<SignUpPage> {
     if (!valid) return;
 
     setState(() { _loading = true; });
-    await AppValidations.fakeDelay();
-    if (!mounted) return;
-    setState(() { _loading = false; });
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/profile-setup');
+    try {
+      // Create user with Firebase Auth
+      final userCredential = await _firebaseService.signUpWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // Save user profile to Firestore
+      await _firebaseService.saveUserProfile(
+        uid: userCredential.user!.uid,
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+      );
+
+      if (!mounted) return;
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Account created successfully! Welcome ${_nameController.text.trim()}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate to profile setup
+      Navigator.of(context).pushReplacementNamed('/profile-setup');
+      
+    } catch (e) {
+      if (!mounted) return;
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Signup failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() { _loading = false; });
+      }
+    }
   }
 
   @override

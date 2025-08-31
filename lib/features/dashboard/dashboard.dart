@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
+import 'package:car_wash_app/services/auth_provider.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -13,11 +15,23 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _loading = true;
   List<_Service> _services = const <_Service>[];
   final Set<String> _selected = <String>{};
+  Map<String, dynamic>? _userProfile;
 
   @override
   void initState() {
     super.initState();
     _fetchServices();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final authProvider = context.read<AuthProvider>();
+    final profile = await authProvider.getUserProfile();
+    if (mounted) {
+      setState(() {
+        _userProfile = profile;
+      });
+    }
   }
 
   Future<void> _fetchServices() async {
@@ -44,6 +58,12 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
+  Future<void> _logout() async {
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.signOut();
+    // Navigation will be handled automatically by the auth state listener
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,6 +75,49 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // User welcome section
+                if (_userProfile != null) ...[
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.secondary,
+                          child: Text(
+                            _userProfile!['name']?.substring(0, 1).toUpperCase() ?? 'U',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back!',
+                                style: context.text.bodySmall?.copyWith(
+                                  color: Theme.of(context).hintColor,
+                                ),
+                              ),
+                              Text(
+                                _userProfile!['name'] ?? 'User',
+                                style: context.text.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                   child: Text('Services', style: context.text.titleLarge),
@@ -113,7 +176,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   const SizedBox(height: AppSpacing.sm),
                                   Text(s.name, style: context.text.titleMedium),
                                   const SizedBox(height: AppSpacing.xs),
-                                  Text('4${s.price}', style: context.text.bodySmall),
+                                  Text('${s.price}', style: context.text.bodySmall),
                                   const SizedBox(height: AppSpacing.xs),
                                   Text('Tap to select', style: context.text.bodySmall),
                                 ],
@@ -126,7 +189,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          AppButton(label: 'Log out', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/login')),
+                          AppButton(label: 'Log out', primary: false, onPressed: _logout),
                           AppButton(label: 'Proceed to Booking', primary: true, onPressed: _selected.isEmpty ? null : () => Navigator.of(context).pushNamed('/slot-selection')),
                         ],
                       ),

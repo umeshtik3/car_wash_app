@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/utils/app_validations.dart';
+import 'package:car_wash_app/services/firebase_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,6 +18,8 @@ class _LoginPageState extends State<LoginPage> {
   String? _emailError;
   String? _passwordError;
   bool _loading = false;
+
+  final FirebaseService _firebaseService = FirebaseService();
 
   @override
   void dispose() {
@@ -45,12 +48,42 @@ class _LoginPageState extends State<LoginPage> {
     if (!valid) return;
 
     setState(() { _loading = true; });
-    await AppValidations.fakeDelay();
-    if (!mounted) return;
-    setState(() { _loading = false; });
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/dashboard');
+    try {
+      // Sign in with Firebase Auth
+      await _firebaseService.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (!mounted) return;
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login successful!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate to dashboard
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+      
+    } catch (e) {
+      if (!mounted) return;
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() { _loading = false; });
+      }
+    }
   }
 
   @override
