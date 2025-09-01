@@ -23,6 +23,15 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  // Method to manually refresh the current user state
+  Future<void> refreshUserState() async {
+    final currentUser = _firebaseService.currentUser;
+    if (_currentUser != currentUser) {
+      _currentUser = currentUser;
+      notifyListeners();
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await _firebaseService.signOut();

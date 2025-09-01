@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/utils/app_validations.dart';
+import 'package:provider/provider.dart';
+import 'package:car_wash_app/services/auth_provider.dart';
+import 'package:car_wash_app/services/firebase_service.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -19,6 +22,30 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   String? _phoneError;
   String? _addressError;
   bool _loading = false;
+  final FirebaseService _firebaseService = FirebaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUser;
+    
+    if (user != null) {
+      // Load existing user data if available
+      final userProfile = await _firebaseService.getUserProfile(user.uid);
+      if (userProfile != null && mounted) {
+        setState(() {
+          _nameController.text = userProfile['name'] ?? '';
+          _phoneController.text = userProfile['phone'] ?? '';
+          _addressController.text = userProfile['address'] ?? '';
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -59,89 +86,136 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     if (!valid) return;
 
     setState(() { _loading = true; });
-    await AppValidations.fakeDelay();
-    if (!mounted) return;
-    setState(() { _loading = false; });
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/car-details');
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.currentUser;
+      
+      if (user != null) {
+        // Update user profile in Firestore
+        await _firebaseService.updateUserProfile(
+          uid: user.uid,
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          address: _addressController.text.trim(),
+        );
+        
+        // Refresh the auth provider state
+        await authProvider.refreshUserState();
+      }
+
+      if (!mounted) return;
+      setState(() { _loading = false; });
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/car-details');
+      
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; });
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save profile: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: Text('Profile setup', style: context.text.titleLarge),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppCard(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Tell us about you', style: context.text.headlineSmall),
-                      const SizedBox(height: AppSpacing.lg),
-                      AppTextField(
-                        label: 'Name',
-                        hint: 'Your full name',
-                        controller: _nameController,
-                        errorText: _nameError,
-                        onChanged: (_) => _clearError('name'),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        label: 'Phone',
-                        hint: 'Your phone number',
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        errorText: _phoneError,
-                        onChanged: (_) => _clearError('phone'),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      // Multiline textarea equivalent
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        // Check if user is authenticated
+        if (!authProvider.isAuthenticated) {
+          // Redirect to login if not authenticated
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.of(context).pushReplacementNamed('/login');
+          });
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        return Scaffold(
+          body: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                      child: Text('Profile setup', style: context.text.titleLarge),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppCard(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text('Address', style: Theme.of(context).textTheme.bodySmall),
-                          const SizedBox(height: AppSpacing.xs),
-                          TextField(
-                            controller: _addressController,
-                            maxLines: 3,
-                            keyboardType: TextInputType.multiline,
-                            onChanged: (_) => _clearError('address'),
-                            decoration: InputDecoration(
-                              hintText: 'Street, City, State, ZIP',
-                              errorText: _addressError,
-                            ),
+                          Text('Tell us about you', style: context.text.headlineSmall),
+                          const SizedBox(height: AppSpacing.lg),
+                          AppTextField(
+                            label: 'Name',
+                            hint: 'Your full name',
+                            controller: _nameController,
+                            errorText: _nameError,
+                            onChanged: (_) => _clearError('name'),
                           ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            label: 'Phone',
+                            hint: 'Your phone number',
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            errorText: _phoneError,
+                            onChanged: (_) => _clearError('phone'),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          // Multiline textarea equivalent
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Address', style: Theme.of(context).textTheme.bodySmall),
+                              const SizedBox(height: AppSpacing.xs),
+                              TextField(
+                                controller: _addressController,
+                                maxLines: 3,
+                                keyboardType: TextInputType.multiline,
+                                onChanged: (_) => _clearError('address'),
+                                decoration: InputDecoration(
+                                  hintText: 'Street, City, State, ZIP',
+                                  errorText: _addressError,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppButton(
+                            label: 'Save',
+                            primary: true,
+                            loading: _loading,
+                            onPressed: _submit,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          AppButton(label: 'Skip for now', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/car-details')),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppButton(
-                        label: 'Save',
-                        primary: true,
-                        loading: _loading,
-                        onPressed: _submit,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      AppButton(label: 'Skip for now', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/car-details')),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

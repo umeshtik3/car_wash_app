@@ -3,6 +3,8 @@ import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/utils/app_validations.dart';
 import 'package:car_wash_app/services/firebase_service.dart';
+import 'package:provider/provider.dart';
+import 'package:car_wash_app/services/auth_provider.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -95,6 +97,16 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
 
+      // Ensure the AuthProvider is properly updated
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.refreshUserState();
+      
+      // Wait a moment for the AuthProvider to properly update the state
+      // This ensures the authentication state is properly reflected
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (!mounted) return;
+      
       // Navigate to profile setup
       Navigator.of(context).pushReplacementNamed('/profile-setup');
       

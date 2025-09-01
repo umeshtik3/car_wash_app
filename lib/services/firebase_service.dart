@@ -66,6 +66,28 @@ class FirebaseService {
     }
   }
 
+  // Update user profile in Firestore
+  Future<void> updateUserProfile({
+    required String uid,
+    required String name,
+    String? phone,
+    String? address,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'name': name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      
+      if (phone != null) updateData['phone'] = phone;
+      if (address != null) updateData['address'] = address;
+      
+      await _firestore.collection('users').doc(uid).update(updateData);
+    } catch (e) {
+      throw Exception('Failed to update user profile: $e');
+    }
+  }
+
   // Get user profile from Firestore
   Future<Map<String, dynamic>?> getUserProfile(String uid) async {
     try {
