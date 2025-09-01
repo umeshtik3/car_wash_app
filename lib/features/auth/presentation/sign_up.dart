@@ -71,7 +71,9 @@ class _SignUpPageState extends State<SignUpPage> {
     final bool valid = errors.values.every((String? e) => e == null);
     if (!valid) return;
 
-    setState(() { _loading = true; });
+    setState(() {
+      _loading = true;
+    });
 
     try {
       // Create user with Firebase Auth
@@ -88,11 +90,13 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       if (!mounted) return;
-      
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Account created successfully! Welcome ${_nameController.text.trim()}'),
+          content: Text(
+            'Account created successfully! Welcome ${_nameController.text.trim()}',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -100,20 +104,19 @@ class _SignUpPageState extends State<SignUpPage> {
       // Ensure the AuthProvider is properly updated
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.refreshUserState();
-      
+
       // Wait a moment for the AuthProvider to properly update the state
       // This ensures the authentication state is properly reflected
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       if (!mounted) return;
-      
+
       // Navigate to profile setup
       Navigator.of(context).pushReplacementNamed('/profile-setup');
-      
     } catch (e) {
       print(e);
       if (!mounted) return;
-      
+
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -123,7 +126,9 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } finally {
       if (mounted) {
-        setState(() { _loading = false; });
+        setState(() {
+          _loading = false;
+        });
       }
     }
   }
@@ -133,7 +138,10 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.xl,
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
@@ -141,7 +149,10 @@ class _SignUpPageState extends State<SignUpPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: Text('Create your account', style: context.text.titleLarge),
+                  child: Text(
+                    'Create your account',
+                    style: context.text.titleLarge,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppCard(
@@ -196,11 +207,20 @@ class _SignUpPageState extends State<SignUpPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('Already have an account?', style: context.text.bodySmall),
+                          Text(
+                            'Already have an account?',
+                            style: context.text.bodySmall,
+                          ),
                           const SizedBox(width: AppSpacing.sm),
-                          AppButton(label: 'Login', primary: false, onPressed: () => Navigator.of(context).pushReplacementNamed('/login')),
+                          AppButton(
+                            label: 'Login',
+                            primary: false,
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).pushReplacementNamed('/login'),
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -212,5 +232,3 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 }
-
-
