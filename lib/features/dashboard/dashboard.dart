@@ -81,15 +81,18 @@ class _DashboardPageState extends State<DashboardPage> {
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppColors.secondary,
-                          child: Text(
-                            _userProfile!['name']?.substring(0, 1).toUpperCase() ?? 'U',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pushNamed('/profile-view'),
+                          child: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: AppColors.secondary,
+                            child: Text(
+                              _userProfile!['name']?.substring(0, 1).toUpperCase() ?? 'U',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -104,10 +107,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                   color: Theme.of(context).hintColor,
                                 ),
                               ),
-                              Text(
-                                _userProfile!['name'] ?? 'User',
-                                style: context.text.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                              GestureDetector(
+                                onTap: () => Navigator.of(context).pushNamed('/profile-view'),
+                                child: Text(
+                                  _userProfile!['name'] ?? 'User',
+                                  style: context.text.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                             ],
@@ -186,11 +193,25 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ],
                       const SizedBox(height: AppSpacing.md),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
                         children: [
-                          AppButton(label: 'Log out', primary: false, onPressed: _logout),
-                          AppButton(label: 'Proceed to Booking', primary: true, onPressed: _selected.isEmpty ? null : () => Navigator.of(context).pushNamed('/slot-selection')),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppButton(label: 'Log out', primary: false, onPressed: _logout),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: AppButton(label: 'View Profile', primary: false, onPressed: () => Navigator.of(context).pushNamed('/profile-view')),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          AppButton(
+                            label: 'Proceed to Booking', 
+                            primary: true, 
+                            onPressed: _selected.isEmpty ? null : () => Navigator.of(context).pushNamed('/slot-selection')
+                          ),
                         ],
                       ),
                     ],

@@ -1,3 +1,4 @@
+import 'package:car_wash_app/features/profile/profile_view.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
               '/login': (_) => const LoginPage(),
               '/signup': (_) => const SignUpPage(),
               '/profile-setup': (_) => const ProfileSetupPage(),
+              '/profile-view': (_) => const ProfileViewPage(),
               '/car-details': (_) => const CarDetailsPage(),
               '/dashboard': (_) => const DashboardPage(),
               '/slot-selection': (_) => const SlotSelectionPage(),
