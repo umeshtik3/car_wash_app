@@ -4,7 +4,7 @@ import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/utils/app_validations.dart';
 import 'package:provider/provider.dart';
 import 'package:car_wash_app/services/auth_provider.dart';
-import 'package:car_wash_app/services/firebase_service.dart';
+import 'package:car_wash_app/services/profile_firebase_service.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -22,7 +22,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   String? _phoneError;
   String? _addressError;
   bool _loading = false;
-  final FirebaseService _firebaseService = FirebaseService();
+  final ProfileFirebaseService _profileService = ProfileFirebaseService();
 
   @override
   void initState() {
@@ -35,14 +35,19 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     final user = authProvider.currentUser;
     
     if (user != null) {
-      // Load existing user data if available
-      final userProfile = await _firebaseService.getUserProfile(user.uid);
-      if (userProfile != null && mounted) {
-        setState(() {
-          _nameController.text = userProfile['name'] ?? '';
-          _phoneController.text = userProfile['phone'] ?? '';
-          _addressController.text = userProfile['address'] ?? '';
-        });
+      try {
+        // Load existing user data if available
+        final userProfile = await _profileService.getUserProfile(user.uid);
+        if (userProfile != null && mounted) {
+          setState(() {
+            _nameController.text = userProfile['name'] ?? '';
+            _phoneController.text = userProfile['phone'] ?? '';
+            _addressController.text = userProfile['address'] ?? '';
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading user profile: $e');
+        // Continue with empty form if profile doesn't exist yet
       }
     }
   }
@@ -92,13 +97,27 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       final user = authProvider.currentUser;
       
       if (user != null) {
-        // Update user profile in Firestore
-        await _firebaseService.updateUserProfile(
-          uid: user.uid,
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
-          address: _addressController.text.trim(),
-        );
+        // Check if this is a new profile or update
+        final existingProfile = await _profileService.getUserProfile(user.uid);
+        
+        if (existingProfile == null) {
+          // Create new profile
+          await _profileService.saveUserProfile(
+            uid: user.uid,
+            name: _nameController.text.trim(),
+            email: user.email ?? '',
+            phone: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
+            address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
+          );
+        } else {
+          // Update existing profile
+          await _profileService.updateUserProfile(
+            uid: user.uid,
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
+            address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
+          );
+        }
         
         // Refresh the auth provider state
         await authProvider.refreshUserState();
