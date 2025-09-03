@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/services/auth_provider.dart';
+import 'package:car_wash_app/services/service_firebase_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -13,9 +14,10 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   bool _loading = true;
-  List<_Service> _services = const <_Service>[];
+  List<Map<String, dynamic>> _services = [];
   final Set<String> _selected = <String>{};
   Map<String, dynamic>? _userProfile;
+  final ServiceFirebaseService _serviceService = ServiceFirebaseService();
 
   @override
   void initState() {
@@ -36,16 +38,29 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _fetchServices() async {
     setState(() { _loading = true; });
-    await Future<void>.delayed(const Duration(milliseconds: 800));
-    setState(() {
-      _loading = false;
-      _services = const <_Service>[
-        _Service(id: 'basic-wash', name: 'Basic Wash', price: 10, icon: 'W'),
-        _Service(id: 'exterior-detailing', name: 'Exterior Detailing', price: 40, icon: 'D'),
-        _Service(id: 'interior-clean', name: 'Interior Clean', price: 25, icon: 'I'),
-        _Service(id: 'premium-full-detail', name: 'Premium Full Detail', price: 80, icon: 'P'),
-      ];
-    });
+    try {
+      final services = await _serviceService.getAllActiveServices();
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _services = services;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _services = [];
+        });
+        // Show error message to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load services: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _toggleSelect(String id) {
@@ -162,11 +177,11 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                           itemCount: _services.length,
                           itemBuilder: (BuildContext context, int index) {
-                            final _Service s = _services[index];
-                            final bool selected = _selected.contains(s.id);
+                            final service = _services[index];
+                            final bool selected = _selected.contains(service['id']);
                             return SelectableCard(
                               selected: selected,
-                              onTap: () => _toggleSelect(s.id),
+                              onTap: () => _toggleSelect(service['id']),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -178,14 +193,33 @@ class _DashboardPageState extends State<DashboardPage> {
                                       color: AppColors.secondary,
                                       borderRadius: AppRadii.small,
                                     ),
-                                    child: Text(s.icon, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                    child: Text(
+                                      service['icon'] ?? 'S', 
+                                      style: const TextStyle(fontWeight: FontWeight.w700)
+                                    ),
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
-                                  Text(s.name, style: context.text.titleMedium),
+                                  Text(
+                                    service['name'] ?? 'Service', 
+                                    style: context.text.titleMedium,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   const SizedBox(height: AppSpacing.xs),
-                                  Text('${s.price}', style: context.text.bodySmall),
+                                  Text(
+                                    '\$${service['price']?.toStringAsFixed(0) ?? '0'}', 
+                                    style: context.text.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
                                   const SizedBox(height: AppSpacing.xs),
-                                  Text('Tap to select', style: context.text.bodySmall),
+                                  Text(
+                                    'Tap to select', 
+                                    style: context.text.bodySmall?.copyWith(
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
@@ -226,12 +260,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-class _Service {
-  final String id;
-  final String name;
-  final int price;
-  final String icon;
-  const _Service({required this.id, required this.name, required this.price, required this.icon});
-}
+
 
 

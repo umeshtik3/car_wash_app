@@ -1,0 +1,382 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class BookingFirebaseService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Get current user
+  User? get currentUser => _auth.currentUser;
+
+  /// Create a new booking in Firestore
+  /// Creates document in bookings collection
+  Future<String> createBooking({
+    required String userId,
+    required String carId,
+    required List<String> selectedServices,
+    required double totalPrice,
+    required String bookingDate, // YYYY-MM-DD format
+    required String timeSlot, // HH:MM-HH:MM format
+    String? specialInstructions,
+    String? paymentMethod,
+    String? location,
+  }) async {
+    try {
+      final bookingRef = _firestore.collection('bookings').doc();
+      final bookingId = bookingRef.id;
+
+      final bookingData = {
+        'id': bookingId,
+        'userId': userId,
+        'carId': carId,
+        'selectedServices': selectedServices,
+        'totalPrice': totalPrice,
+        'bookingDate': bookingDate,
+        'timeSlot': timeSlot,
+        'status': 'pending',
+        'paymentStatus': 'pending',
+        'specialInstructions': specialInstructions ?? '',
+        'paymentMethod': paymentMethod ?? '',
+        'location': location ?? '',
+        'assignedStaff': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await bookingRef.set(bookingData);
+      return bookingId;
+    } catch (e) {
+      throw Exception('Failed to create booking: $e');
+    }
+  }
+
+  /// Create booking for current user
+  Future<String> createCurrentUserBooking({
+    required String carId,
+    required List<String> selectedServices,
+    required double totalPrice,
+    required String bookingDate,
+    required String timeSlot,
+    String? specialInstructions,
+    String? paymentMethod,
+    String? location,
+  }) async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await createBooking(
+      userId: currentUser!.uid,
+      carId: carId,
+      selectedServices: selectedServices,
+      totalPrice: totalPrice,
+      bookingDate: bookingDate,
+      timeSlot: timeSlot,
+      specialInstructions: specialInstructions,
+      paymentMethod: paymentMethod,
+      location: location,
+    );
+  }
+
+  /// Update booking details in Firestore
+  Future<void> updateBooking({
+    required String bookingId,
+    String? carId,
+    List<String>? selectedServices,
+    double? totalPrice,
+    String? bookingDate,
+    String? timeSlot,
+    String? status,
+    String? paymentStatus,
+    String? paymentMethod,
+    String? specialInstructions,
+    String? assignedStaff,
+    String? location,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Only update fields that are provided
+      if (carId != null && carId.isNotEmpty) updateData['carId'] = carId;
+      if (selectedServices != null) updateData['selectedServices'] = selectedServices;
+      if (totalPrice != null) updateData['totalPrice'] = totalPrice;
+      if (bookingDate != null && bookingDate.isNotEmpty) updateData['bookingDate'] = bookingDate;
+      if (timeSlot != null && timeSlot.isNotEmpty) updateData['timeSlot'] = timeSlot;
+      if (status != null && status.isNotEmpty) updateData['status'] = status;
+      if (paymentStatus != null && paymentStatus.isNotEmpty) updateData['paymentStatus'] = paymentStatus;
+      if (paymentMethod != null) updateData['paymentMethod'] = paymentMethod;
+      if (specialInstructions != null) updateData['specialInstructions'] = specialInstructions;
+      if (assignedStaff != null) updateData['assignedStaff'] = assignedStaff;
+      if (location != null) updateData['location'] = location;
+
+      if (updateData.length > 1) { // More than just updatedAt
+        await _firestore.collection('bookings').doc(bookingId).update(updateData);
+      }
+    } catch (e) {
+      throw Exception('Failed to update booking: $e');
+    }
+  }
+
+  /// Update booking status
+  Future<void> updateBookingStatus(String bookingId, String status) async {
+    try {
+      final updateData = <String, dynamic>{
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Add completion timestamp if status is completed
+      if (status == 'completed') {
+        updateData['completedAt'] = FieldValue.serverTimestamp();
+      }
+
+      await _firestore.collection('bookings').doc(bookingId).update(updateData);
+    } catch (e) {
+      throw Exception('Failed to update booking status: $e');
+    }
+  }
+
+  /// Update payment status
+  Future<void> updatePaymentStatus(String bookingId, String paymentStatus) async {
+    try {
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'paymentStatus': paymentStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update payment status: $e');
+    }
+  }
+
+  /// Get all bookings for a user
+  Future<List<Map<String, dynamic>>> getUserBookings(String userId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .orderBy('bookingDate', descending: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get user bookings: $e');
+    }
+  }
+
+  /// Get all bookings for current user
+  Future<List<Map<String, dynamic>>> getCurrentUserBookings() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getUserBookings(currentUser!.uid);
+  }
+
+  /// Get bookings by status
+  Future<List<Map<String, dynamic>>> getBookingsByStatus(String status) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('status', isEqualTo: status)
+          .orderBy('bookingDate', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get bookings by status: $e');
+    }
+  }
+
+  /// Get bookings by date
+  Future<List<Map<String, dynamic>>> getBookingsByDate(String date) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('bookingDate', isEqualTo: date)
+          .orderBy('timeSlot')
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get bookings by date: $e');
+    }
+  }
+
+  /// Get specific booking details
+  Future<Map<String, dynamic>?> getBookingDetails(String bookingId) async {
+    try {
+      DocumentSnapshot doc = await _firestore.collection('bookings').doc(bookingId).get();
+
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get booking details: $e');
+    }
+  }
+
+  /// Stream all bookings for a user (real-time updates)
+  Stream<QuerySnapshot> getUserBookingsStream(String userId) {
+    return _firestore
+        .collection('bookings')
+        .where('userId', isEqualTo: userId)
+        .orderBy('bookingDate', descending: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  /// Stream all bookings for current user (real-time updates)
+  Stream<QuerySnapshot> getCurrentUserBookingsStream() {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return getUserBookingsStream(currentUser!.uid);
+  }
+
+  /// Stream bookings by status (real-time updates)
+  Stream<QuerySnapshot> getBookingsByStatusStream(String status) {
+    return _firestore
+        .collection('bookings')
+        .where('status', isEqualTo: status)
+        .orderBy('bookingDate', descending: true)
+        .snapshots();
+  }
+
+  /// Stream bookings by date (real-time updates)
+  Stream<QuerySnapshot> getBookingsByDateStream(String date) {
+    return _firestore
+        .collection('bookings')
+        .where('bookingDate', isEqualTo: date)
+        .orderBy('timeSlot')
+        .snapshots();
+  }
+
+  /// Stream specific booking details (real-time updates)
+  Stream<DocumentSnapshot> getBookingDetailsStream(String bookingId) {
+    return _firestore.collection('bookings').doc(bookingId).snapshots();
+  }
+
+  /// Cancel booking
+  Future<void> cancelBooking(String bookingId) async {
+    try {
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'status': 'cancelled',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to cancel booking: $e');
+    }
+  }
+
+  /// Delete booking (permanent deletion)
+  Future<void> deleteBooking(String bookingId) async {
+    try {
+      await _firestore.collection('bookings').doc(bookingId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete booking: $e');
+    }
+  }
+
+  /// Get booking count for user
+  Future<int> getUserBookingCount(String userId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      return querySnapshot.docs.length;
+    } catch (e) {
+      throw Exception('Failed to get user booking count: $e');
+    }
+  }
+
+  /// Get booking count for current user
+  Future<int> getCurrentUserBookingCount() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getUserBookingCount(currentUser!.uid);
+  }
+
+  /// Check if booking exists
+  Future<bool> bookingExists(String bookingId) async {
+    try {
+      DocumentSnapshot doc = await _firestore.collection('bookings').doc(bookingId).get();
+      return doc.exists;
+    } catch (e) {
+      throw Exception('Failed to check booking existence: $e');
+    }
+  }
+
+  /// Get bookings by car
+  Future<List<Map<String, dynamic>>> getBookingsByCar(String carId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('carId', isEqualTo: carId)
+          .orderBy('bookingDate', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get bookings by car: $e');
+    }
+  }
+
+  /// Get upcoming bookings for user
+  Future<List<Map<String, dynamic>>> getUpcomingUserBookings(String userId) async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
+      
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .where('bookingDate', isGreaterThanOrEqualTo: today)
+          .where('status', whereIn: ['pending', 'confirmed'])
+          .orderBy('bookingDate')
+          .orderBy('timeSlot')
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get upcoming user bookings: $e');
+    }
+  }
+
+  /// Get upcoming bookings for current user
+  Future<List<Map<String, dynamic>>> getCurrentUserUpcomingBookings() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getUpcomingUserBookings(currentUser!.uid);
+  }
+
+  /// Check time slot availability
+  Future<bool> isTimeSlotAvailable(String date, String timeSlot) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('bookingDate', isEqualTo: date)
+          .where('timeSlot', isEqualTo: timeSlot)
+          .where('status', whereIn: ['pending', 'confirmed', 'in_progress'])
+          .get();
+
+      return querySnapshot.docs.isEmpty;
+    } catch (e) {
+      throw Exception('Failed to check time slot availability: $e');
+    }
+  }
+}

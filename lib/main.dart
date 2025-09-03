@@ -1,4 +1,5 @@
 import 'package:car_wash_app/features/profile/profile_view.dart';
+import 'package:car_wash_app/utils/seed_services.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
