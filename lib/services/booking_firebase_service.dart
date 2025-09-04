@@ -379,4 +379,153 @@ class BookingFirebaseService {
       throw Exception('Failed to check time slot availability: $e');
     }
   }
+
+  /// Save selected services to temporary booking in Firestore
+  /// Creates/updates document in users/{uid}/tempBooking/selectedServices
+  Future<void> saveSelectedServices({
+    required String userId,
+    required List<String> selectedServiceIds,
+  }) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('selectedServices');
+
+      final selectedServicesData = {
+        'selectedServiceIds': selectedServiceIds,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await tempBookingRef.set(selectedServicesData, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to save selected services: $e');
+    }
+  }
+
+  /// Save selected services for current user
+  Future<void> saveCurrentUserSelectedServices({
+    required List<String> selectedServiceIds,
+  }) async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await saveSelectedServices(
+      userId: currentUser!.uid,
+      selectedServiceIds: selectedServiceIds,
+    );
+  }
+
+  /// Update selected services in temporary booking
+  /// Updates document in users/{uid}/tempBooking/selectedServices
+  Future<void> updateSelectedServices({
+    required String userId,
+    required List<String> selectedServiceIds,
+  }) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('selectedServices');
+
+      final updateData = {
+        'selectedServiceIds': selectedServiceIds,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await tempBookingRef.update(updateData);
+    } catch (e) {
+      throw Exception('Failed to update selected services: $e');
+    }
+  }
+
+  /// Update selected services for current user
+  Future<void> updateCurrentUserSelectedServices({
+    required List<String> selectedServiceIds,
+  }) async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await updateSelectedServices(
+      userId: currentUser!.uid,
+      selectedServiceIds: selectedServiceIds,
+    );
+  }
+
+  /// Get selected services from temporary booking
+  /// Retrieves document from users/{uid}/tempBooking/selectedServices
+  Future<List<String>?> getSelectedServices(String userId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('selectedServices');
+
+      final doc = await tempBookingRef.get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final selectedServiceIds = data['selectedServiceIds'] as List<dynamic>?;
+        return selectedServiceIds?.cast<String>();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get selected services: $e');
+    }
+  }
+
+  /// Get selected services for current user
+  Future<List<String>?> getCurrentUserSelectedServices() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getSelectedServices(currentUser!.uid);
+  }
+
+  /// Clear selected services from temporary booking
+  /// Deletes document from users/{uid}/tempBooking/selectedServices
+  Future<void> clearSelectedServices(String userId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('selectedServices');
+
+      await tempBookingRef.delete();
+    } catch (e) {
+      throw Exception('Failed to clear selected services: $e');
+    }
+  }
+
+  /// Clear selected services for current user
+  Future<void> clearCurrentUserSelectedServices() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await clearSelectedServices(currentUser!.uid);
+  }
+
+  /// Stream selected services from temporary booking (real-time updates)
+  /// Returns stream of document from users/{uid}/tempBooking/selectedServices
+  Stream<DocumentSnapshot> getSelectedServicesStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('tempBooking')
+        .doc('selectedServices')
+        .snapshots();
+  }
+
+  /// Stream selected services for current user (real-time updates)
+  Stream<DocumentSnapshot> getCurrentUserSelectedServicesStream() {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return getSelectedServicesStream(currentUser!.uid);
+  }
 }

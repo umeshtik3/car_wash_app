@@ -4,6 +4,7 @@ import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/services/auth_provider.dart';
 import 'package:car_wash_app/services/service_firebase_service.dart';
+import 'package:car_wash_app/services/booking_firebase_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -18,12 +19,14 @@ class _DashboardPageState extends State<DashboardPage> {
   final Set<String> _selected = <String>{};
   Map<String, dynamic>? _userProfile;
   final ServiceFirebaseService _serviceService = ServiceFirebaseService();
+  final BookingFirebaseService _bookingService = BookingFirebaseService();
 
   @override
   void initState() {
     super.initState();
     _fetchServices();
     _loadUserProfile();
+    _loadSelectedServices();
   }
 
   Future<void> _loadUserProfile() async {
@@ -71,9 +74,57 @@ class _DashboardPageState extends State<DashboardPage> {
         _selected.add(id);
       }
     });
+    // Save selected services to Firestore
+    _saveSelectedServices();
+  }
+
+  /// Load previously selected services from Firestore
+  Future<void> _loadSelectedServices() async {
+    try {
+      final selectedServices = await _bookingService.getCurrentUserSelectedServices();
+      if (mounted && selectedServices != null) {
+        setState(() {
+          _selected.clear();
+          _selected.addAll(selectedServices);
+        });
+      }
+    } catch (e) {
+      // Silently handle error - user can still select services
+      debugPrint('Failed to load selected services: $e');
+    }
+  }
+
+  /// Save selected services to Firestore
+  Future<void> _saveSelectedServices() async {
+    try {
+      await _bookingService.saveCurrentUserSelectedServices(
+        selectedServiceIds: _selected.toList(),
+      );
+    } catch (e) {
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save selection: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Clear selected services from Firestore
+  Future<void> _clearSelectedServices() async {
+    try {
+      await _bookingService.clearCurrentUserSelectedServices();
+    } catch (e) {
+      debugPrint('Failed to clear selected services: $e');
+    }
   }
 
   Future<void> _logout() async {
+    // Clear selected services before logout
+    await _clearSelectedServices();
     final authProvider = context.read<AuthProvider>();
     await authProvider.signOut();
     // Navigation will be handled automatically by the auth state listener
@@ -244,7 +295,13 @@ class _DashboardPageState extends State<DashboardPage> {
                           AppButton(
                             label: 'Proceed to Booking', 
                             primary: true, 
-                            onPressed: _selected.isEmpty ? null : () => Navigator.of(context).pushNamed('/slot-selection')
+                            onPressed: _selected.isEmpty ? null : () async {
+                              // Save final selection before proceeding
+                              await _saveSelectedServices();
+                              if (mounted) {
+                                Navigator.of(context).pushNamed('/slot-selection');
+                              }
+                            }
                           ),
                         ],
                       ),
