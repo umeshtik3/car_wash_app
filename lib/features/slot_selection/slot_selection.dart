@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
 import 'package:car_wash_app/services/booking_firebase_service.dart';
+import 'package:car_wash_app/services/service_firebase_service.dart';
 
 class SlotSelectionPage extends StatefulWidget {
   const SlotSelectionPage({super.key});
@@ -17,13 +18,24 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
   String? _timeError;
   bool _isLoading = false;
   bool _isCheckingAvailability = false;
+  bool _isLoadingServices = false;
   Map<String, bool> _slotAvailability = {};
+  List<Map<String, dynamic>> _selectedServices = [];
+  double _totalPrice = 0.0;
 
   final BookingFirebaseService _bookingService = BookingFirebaseService();
+  final ServiceFirebaseService _serviceService = ServiceFirebaseService();
   
   final List<String> _slots = const <String>[
     '09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch selected services when page loads
+    _fetchSelectedServices();
+  }
 
   String _formatDate(DateTime date) {
     return '${_pad(date.year, 4)}-${_pad(date.month)}-${_pad(date.day)}';
@@ -60,6 +72,56 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
     final int hour = int.parse(parts[0]);
     final int nextHour = hour + 1;
     return '${_pad(nextHour)}:00';
+  }
+
+  /// Fetch selected services and their details from Firestore
+  Future<void> _fetchSelectedServices() async {
+    if (_bookingService.currentUser == null) return;
+    
+    setState(() {
+      _isLoadingServices = true;
+    });
+
+    try {
+      // Get selected service IDs from temporary booking
+      final List<String>? selectedServiceIds = await _bookingService.getCurrentUserSelectedServices();
+      
+      if (selectedServiceIds == null || selectedServiceIds.isEmpty) {
+        setState(() {
+          _selectedServices = [];
+          _totalPrice = 0.0;
+          _isLoadingServices = false;
+        });
+        return;
+      }
+
+      // Fetch service details for each selected service
+      final List<Map<String, dynamic>> services = [];
+      double totalPrice = 0.0;
+
+      for (String serviceId in selectedServiceIds) {
+        final Map<String, dynamic>? serviceDetails = await _serviceService.getServiceDetails(serviceId);
+        if (serviceDetails != null) {
+          services.add(serviceDetails);
+          totalPrice += (serviceDetails['price'] as num).toDouble();
+        }
+      }
+
+      setState(() {
+        _selectedServices = services;
+        _totalPrice = totalPrice;
+        _isLoadingServices = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingServices = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading services: $e')),
+        );
+      }
+    }
   }
 
   void _validateState() {
@@ -166,29 +228,41 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
   }
 
   Widget _buildSummary() {
-    final List<_SummaryRow> selectedServices = const <_SummaryRow>[
-      // Static demo entries; replace with actual state later
-      _SummaryRow(label: 'Basic Wash', value: '49.99'),
-      _SummaryRow(label: 'Interior Clean', value: '19.99'),
-    ];
-    final String dateStr = _selectedDate != null ? _selectedDate!.toLocal().toString().split(' ').first : '—';
+    final String dateStr = _selectedDate != null ? _formatDate(_selectedDate!) : '—';
     final String timeStr = _selectedTime ?? '—';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final _SummaryRow row in selectedServices)
-          Row(children: [
-            Text(row.label),
-            const Spacer(),
-            Text(row.value),
-          ]),
+        // Show loading indicator while fetching services
+        if (_isLoadingServices)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_selectedServices.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Text('No services selected'),
+            ),
+          )
+        else
+          // Show selected services
+          for (final service in _selectedServices)
+            Row(children: [
+              Text(service['name'] ?? 'Unknown Service'),
+              const Spacer(),
+              Text('₹${(service['price'] as num).toStringAsFixed(2)}'),
+            ]),
         const SizedBox(height: AppSpacing.sm),
         Row(children: [Text('Date'), const Spacer(), Text(dateStr)]),
         Row(children: [Text('Time'), const Spacer(), Text(timeStr)]),
         Row(children: [
           Text('Total', style: const TextStyle(fontWeight: FontWeight.w600)),
           const Spacer(),
-          Text('69.98', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text('₹${_totalPrice.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600)),
         ]),
       ],
     );
