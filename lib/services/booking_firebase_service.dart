@@ -528,4 +528,159 @@ class BookingFirebaseService {
     }
     return getSelectedServicesStream(currentUser!.uid);
   }
+
+  /// Save booking schedule to temporary booking in Firestore
+  /// Creates/updates document in users/{uid}/tempBooking/bookingSchedule
+  Future<void> saveBookingSchedule({
+    required String userId,
+    required String bookingDate,
+    required String timeSlot,
+  }) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingSchedule');
+
+      final bookingScheduleData = {
+        'bookingDate': bookingDate,
+        'timeSlot': timeSlot,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await tempBookingRef.set(bookingScheduleData, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to save booking schedule: $e');
+    }
+  }
+
+  /// Save booking schedule for current user
+  Future<void> saveCurrentUserBookingSchedule({
+    required String bookingDate,
+    required String timeSlot,
+  }) async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await saveBookingSchedule(
+      userId: currentUser!.uid,
+      bookingDate: bookingDate,
+      timeSlot: timeSlot,
+    );
+  }
+
+  /// Update booking schedule in temporary booking
+  /// Updates document in users/{uid}/tempBooking/bookingSchedule
+  Future<void> updateBookingSchedule({
+    required String userId,
+    required String bookingDate,
+    required String timeSlot,
+  }) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingSchedule');
+
+      final updateData = {
+        'bookingDate': bookingDate,
+        'timeSlot': timeSlot,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await tempBookingRef.update(updateData);
+    } catch (e) {
+      throw Exception('Failed to update booking schedule: $e');
+    }
+  }
+
+  /// Update booking schedule for current user
+  Future<void> updateCurrentUserBookingSchedule({
+    required String bookingDate,
+    required String timeSlot,
+  }) async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await updateBookingSchedule(
+      userId: currentUser!.uid,
+      bookingDate: bookingDate,
+      timeSlot: timeSlot,
+    );
+  }
+
+  /// Get booking schedule from temporary booking
+  /// Retrieves document from users/{uid}/tempBooking/bookingSchedule
+  Future<Map<String, dynamic>?> getBookingSchedule(String userId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingSchedule');
+
+      final doc = await tempBookingRef.get();
+      
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get booking schedule: $e');
+    }
+  }
+
+  /// Get booking schedule for current user
+  Future<Map<String, dynamic>?> getCurrentUserBookingSchedule() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getBookingSchedule(currentUser!.uid);
+  }
+
+  /// Clear booking schedule from temporary booking
+  /// Deletes document from users/{uid}/tempBooking/bookingSchedule
+  Future<void> clearBookingSchedule(String userId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingSchedule');
+
+      await tempBookingRef.delete();
+    } catch (e) {
+      throw Exception('Failed to clear booking schedule: $e');
+    }
+  }
+
+  /// Clear booking schedule for current user
+  Future<void> clearCurrentUserBookingSchedule() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await clearBookingSchedule(currentUser!.uid);
+  }
+
+  /// Stream booking schedule from temporary booking (real-time updates)
+  /// Returns stream of document from users/{uid}/tempBooking/bookingSchedule
+  Stream<DocumentSnapshot> getBookingScheduleStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('tempBooking')
+        .doc('bookingSchedule')
+        .snapshots();
+  }
+
+  /// Stream booking schedule for current user (real-time updates)
+  Stream<DocumentSnapshot> getCurrentUserBookingScheduleStream() {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return getBookingScheduleStream(currentUser!.uid);
+  }
 }

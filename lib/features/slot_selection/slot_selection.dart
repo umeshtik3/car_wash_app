@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_wash_app/app_theme/app_theme.dart';
 import 'package:car_wash_app/app_theme/components.dart';
+import 'package:car_wash_app/services/booking_firebase_service.dart';
 
 class SlotSelectionPage extends StatefulWidget {
   const SlotSelectionPage({super.key});
@@ -14,7 +15,12 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
   String? _selectedTime;
   String? _dateError;
   String? _timeError;
+  bool _isLoading = false;
+  bool _isCheckingAvailability = false;
+  Map<String, bool> _slotAvailability = {};
 
+  final BookingFirebaseService _bookingService = BookingFirebaseService();
+  
   final List<String> _slots = const <String>[
     '09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'
   ];
@@ -31,13 +37,29 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
   }
 
   bool _isSlotDisabled(String time, DateTime forDate) {
-    if (!_isToday(forDate)) return false;
-    final DateTime now = DateTime.now();
-    final List<String> parts = time.split(':');
+    // Check if slot is in the past (for today)
+    if (_isToday(forDate)) {
+      final DateTime now = DateTime.now();
+      final List<String> parts = time.split(':');
+      final int hour = int.parse(parts[0]);
+      final int minute = int.parse(parts[1]);
+      final DateTime slotDateTime = DateTime(forDate.year, forDate.month, forDate.day, hour, minute);
+      if (slotDateTime.isBefore(now) || slotDateTime.isAtSameMomentAs(now)) {
+        return true;
+      }
+    }
+    
+    // Check if slot is unavailable (booked by someone else)
+    final String dateStr = _formatDate(forDate);
+    final String timeSlot = '$time-${_getEndTime(time)}';
+    return _slotAvailability['$dateStr-$timeSlot'] == false;
+  }
+  
+  String _getEndTime(String startTime) {
+    final List<String> parts = startTime.split(':');
     final int hour = int.parse(parts[0]);
-    final int minute = int.parse(parts[1]);
-    final DateTime slotDateTime = DateTime(forDate.year, forDate.month, forDate.day, hour, minute);
-    return slotDateTime.isBefore(now) || slotDateTime.isAtSameMomentAs(now);
+    final int nextHour = hour + 1;
+    return '${_pad(nextHour)}:00';
   }
 
   void _validateState() {
@@ -47,6 +69,78 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
       _dateError = validDate ? null : 'Please select a valid date.';
       _timeError = validTime ? null : 'Please select a time.';
     });
+  }
+
+  /// Check availability for all slots on the selected date
+  Future<void> _checkSlotAvailability() async {
+    if (_selectedDate == null) return;
+    
+    setState(() {
+      _isCheckingAvailability = true;
+    });
+
+    try {
+      final String dateStr = _formatDate(_selectedDate!);
+      final Map<String, bool> availability = {};
+      
+      for (String slot in _slots) {
+        final String timeSlot = '$slot-${_getEndTime(slot)}';
+        final bool isAvailable = await _bookingService.isTimeSlotAvailable(dateStr, timeSlot);
+        availability['$dateStr-$timeSlot'] = isAvailable;
+      }
+      
+      setState(() {
+        _slotAvailability = availability;
+        _isCheckingAvailability = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isCheckingAvailability = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error checking availability: $e')),
+        );
+      }
+    }
+  }
+
+  /// Save selected date and time to temporary booking
+  Future<void> _saveBookingSchedule() async {
+    if (_selectedDate == null || _selectedTime == null) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final String dateStr = _formatDate(_selectedDate!);
+      final String timeSlot = '$_selectedTime-${_getEndTime(_selectedTime!)}';
+      
+      // Save to temporary booking in Firestore
+      await _bookingService.saveBookingSchedule(
+        userId: _bookingService.currentUser!.uid,
+        bookingDate: dateStr,
+        timeSlot: timeSlot,
+      );
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        Navigator.of(context).pushNamed('/payment');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving booking: $e')),
+        );
+      }
+    }
   }
 
   void _onPickDate() async {
@@ -63,8 +157,11 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
       setState(() {
         _selectedDate = picked;
         _selectedTime = null; // reset selection on date change
+        _slotAvailability.clear(); // clear previous availability data
       });
       _validateState();
+      // Check availability for the new date
+      _checkSlotAvailability();
     }
   }
 
@@ -168,18 +265,40 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
                             final String t = _slots[index];
                             final bool disabled = _selectedDate == null ? true : _isSlotDisabled(t, _selectedDate!);
                             final bool selected = t == _selectedTime;
+                            final bool isChecking = _isCheckingAvailability;
+                            
                             return OutlinedButton(
-                              onPressed: disabled ? null : () {
+                              onPressed: (disabled || isChecking) ? null : () {
                                 setState(() { _selectedTime = t; });
                                 _validateState();
                               },
                               style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: selected ? AppColors.primary : Theme.of(context).dividerColor),
+                                side: BorderSide(
+                                  color: selected 
+                                    ? AppColors.primary 
+                                    : disabled 
+                                      ? Theme.of(context).disabledColor
+                                      : Theme.of(context).dividerColor
+                                ),
                                 shape: RoundedRectangleBorder(borderRadius: AppRadii.small),
                                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                                 backgroundColor: selected ? AppColors.primary.withValues(alpha:0.02) : null,
                               ),
-                              child: Text(t, style: TextStyle(color: disabled ? Theme.of(context).disabledColor : null)),
+                              child: isChecking 
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).disabledColor),
+                                    ),
+                                  )
+                                : Text(
+                                    t, 
+                                    style: TextStyle(
+                                      color: disabled ? Theme.of(context).disabledColor : null
+                                    )
+                                  ),
                             );
                           },
                         ),
@@ -194,9 +313,11 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
                         children: [
                           AppButton(label: 'Back', primary: false, onPressed: () => Navigator.of(context).pop()),
                           AppButton(
-                            label: 'Continue',
+                            label: _isLoading ? 'Saving...' : 'Continue',
                             primary: true,
-                            onPressed: (_selectedDate != null && _selectedTime != null) ? () => Navigator.of(context).pushNamed('/payment') : null,
+                            onPressed: (_selectedDate != null && _selectedTime != null && !_isLoading) 
+                              ? _saveBookingSchedule 
+                              : null,
                           ),
                         ],
                       ),
