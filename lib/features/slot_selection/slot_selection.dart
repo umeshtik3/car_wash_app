@@ -220,7 +220,7 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
       
       // Create actual booking in standalone collection
       final String bookingId = await _bookingService.createCurrentUserBooking(
-        carId: _selectedCar!['id'] as String,
+        carId: _selectedCar!['carId'] as String,
         selectedServices: selectedServiceIds,
         totalPrice: _totalPrice,
         bookingDate: dateStr,
