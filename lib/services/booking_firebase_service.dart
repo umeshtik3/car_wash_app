@@ -9,7 +9,7 @@ class BookingFirebaseService {
   User? get currentUser => _auth.currentUser;
 
   /// Create a new booking in Firestore
-  /// Creates document in bookings collection
+  /// Creates document in standalone bookings collection and adds bookingId to user's temp_booking
   Future<String> createBooking({
     required String userId,
     required String carId,
@@ -43,7 +43,12 @@ class BookingFirebaseService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      // Create booking in standalone collection
       await bookingRef.set(bookingData);
+
+      // Add bookingId to user's temp_booking collection
+      await _addBookingIdToUserTempBooking(userId, bookingId);
+
       return bookingId;
     } catch (e) {
       throw Exception('Failed to create booking: $e');
@@ -267,10 +272,23 @@ class BookingFirebaseService {
   /// Cancel booking
   Future<void> cancelBooking(String bookingId) async {
     try {
+      // Get booking details to find userId
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      if (!bookingDoc.exists) {
+        throw Exception('Booking not found');
+      }
+      
+      final bookingData = bookingDoc.data() as Map<String, dynamic>;
+      final userId = bookingData['userId'] as String;
+
+      // Update booking status
       await _firestore.collection('bookings').doc(bookingId).update({
         'status': 'cancelled',
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Remove bookingId from user's temp_booking collection
+      await _removeBookingIdFromUserTempBooking(userId, bookingId);
     } catch (e) {
       throw Exception('Failed to cancel booking: $e');
     }
@@ -279,7 +297,20 @@ class BookingFirebaseService {
   /// Delete booking (permanent deletion)
   Future<void> deleteBooking(String bookingId) async {
     try {
+      // Get booking details to find userId
+      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      if (!bookingDoc.exists) {
+        throw Exception('Booking not found');
+      }
+      
+      final bookingData = bookingDoc.data() as Map<String, dynamic>;
+      final userId = bookingData['userId'] as String;
+
+      // Delete booking from standalone collection
       await _firestore.collection('bookings').doc(bookingId).delete();
+
+      // Remove bookingId from user's temp_booking collection
+      await _removeBookingIdFromUserTempBooking(userId, bookingId);
     } catch (e) {
       throw Exception('Failed to delete booking: $e');
     }
@@ -682,5 +713,117 @@ class BookingFirebaseService {
       throw Exception('No authenticated user found');
     }
     return getBookingScheduleStream(currentUser!.uid);
+  }
+
+  /// Add bookingId to user's temp_booking collection
+  /// Updates users/{userId}/tempBooking/bookingIds array
+  Future<void> _addBookingIdToUserTempBooking(String userId, String bookingId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingIds');
+
+      await tempBookingRef.set({
+        'bookingIds': FieldValue.arrayUnion([bookingId]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to add bookingId to user temp_booking: $e');
+    }
+  }
+
+  /// Remove bookingId from user's temp_booking collection
+  /// Updates users/{userId}/tempBooking/bookingIds array
+  Future<void> _removeBookingIdFromUserTempBooking(String userId, String bookingId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingIds');
+
+      await tempBookingRef.update({
+        'bookingIds': FieldValue.arrayRemove([bookingId]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to remove bookingId from user temp_booking: $e');
+    }
+  }
+
+  /// Get bookingIds from user's temp_booking collection
+  /// Retrieves users/{userId}/tempBooking/bookingIds document
+  Future<List<String>?> getUserTempBookingIds(String userId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingIds');
+
+      final doc = await tempBookingRef.get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final bookingIds = data['bookingIds'] as List<dynamic>?;
+        return bookingIds?.cast<String>();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get user temp booking IDs: $e');
+    }
+  }
+
+  /// Get bookingIds for current user
+  Future<List<String>?> getCurrentUserTempBookingIds() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getUserTempBookingIds(currentUser!.uid);
+  }
+
+  /// Clear all bookingIds from user's temp_booking collection
+  /// Deletes users/{userId}/tempBooking/bookingIds document
+  Future<void> clearUserTempBookingIds(String userId) async {
+    try {
+      final tempBookingRef = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tempBooking')
+          .doc('bookingIds');
+
+      await tempBookingRef.delete();
+    } catch (e) {
+      throw Exception('Failed to clear user temp booking IDs: $e');
+    }
+  }
+
+  /// Clear all bookingIds for current user
+  Future<void> clearCurrentUserTempBookingIds() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await clearUserTempBookingIds(currentUser!.uid);
+  }
+
+  /// Stream bookingIds from user's temp_booking collection (real-time updates)
+  /// Returns stream of users/{userId}/tempBooking/bookingIds document
+  Stream<DocumentSnapshot> getUserTempBookingIdsStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('tempBooking')
+        .doc('bookingIds')
+        .snapshots();
+  }
+
+  /// Stream bookingIds for current user (real-time updates)
+  Stream<DocumentSnapshot> getCurrentUserTempBookingIdsStream() {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return getUserTempBookingIdsStream(currentUser!.uid);
   }
 }
