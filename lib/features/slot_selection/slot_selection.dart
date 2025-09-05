@@ -407,10 +407,4 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
   }
 }
 
-class _SummaryRow {
-  final String label;
-  final String value;
-  const _SummaryRow({required this.label, required this.value});
-}
-
 
