@@ -12,32 +12,36 @@ class PaymentFirebaseService {
   User? get currentUser => _auth.currentUser;
 
   /// Save payment details to Firestore
-  /// Creates document in bookings/{bookingId}/payment collection
+  /// Creates document in separate payments collection and updates booking with paymentID
   Future<void> savePaymentDetails({
     required String bookingId,
     required PaymentResult paymentResult,
   }) async {
     try {
-      final paymentRef = _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
-          .doc(paymentResult.paymentId);
+      // Save payment in separate payments collection
+      final paymentRef = _firestore.collection('payments').doc(paymentResult.paymentId);
 
       final paymentData = {
         ...paymentResult.toMap(),
+        'bookingId': bookingId,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
       await paymentRef.set(paymentData);
+
+      // Update booking document with paymentID reference
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'paymentId': paymentResult.paymentId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       throw Exception('Failed to save payment details: $e');
     }
   }
 
   /// Update payment status in Firestore
-  /// Updates payment document in bookings/{bookingId}/payment/{paymentId}
+  /// Updates payment document in separate payments collection
   Future<void> updatePaymentStatus({
     required String bookingId,
     required String paymentId,
@@ -55,9 +59,7 @@ class PaymentFirebaseService {
       }
 
       await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
           .doc(paymentId)
           .update(updateData);
     } catch (e) {
@@ -66,16 +68,14 @@ class PaymentFirebaseService {
   }
 
   /// Get payment details from Firestore
-  /// Retrieves payment document from bookings/{bookingId}/payment/{paymentId}
+  /// Retrieves payment document from separate payments collection
   Future<PaymentResult?> getPaymentDetails({
     required String bookingId,
     required String paymentId,
   }) async {
     try {
       final doc = await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
           .doc(paymentId)
           .get();
 
@@ -90,13 +90,12 @@ class PaymentFirebaseService {
   }
 
   /// Get all payments for a booking
-  /// Returns list of payment documents from bookings/{bookingId}/payment collection
+  /// Returns list of payment documents from separate payments collection filtered by bookingId
   Future<List<PaymentResult>> getBookingPayments(String bookingId) async {
     try {
       QuerySnapshot querySnapshot = await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
+          .where('bookingId', isEqualTo: bookingId)
           .orderBy('createdAt', descending: true)
           .get();
 
@@ -109,26 +108,23 @@ class PaymentFirebaseService {
   }
 
   /// Stream all payments for a booking (real-time updates)
-  /// Returns stream of payment documents from bookings/{bookingId}/payment collection
+  /// Returns stream of payment documents from separate payments collection filtered by bookingId
   Stream<QuerySnapshot> getBookingPaymentsStream(String bookingId) {
     return _firestore
-        .collection('bookings')
-        .doc(bookingId)
-        .collection('payment')
+        .collection('payments')
+        .where('bookingId', isEqualTo: bookingId)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
   /// Stream specific payment details (real-time updates)
-  /// Returns stream of payment document from bookings/{bookingId}/payment/{paymentId}
+  /// Returns stream of payment document from separate payments collection
   Stream<DocumentSnapshot> getPaymentDetailsStream({
     required String bookingId,
     required String paymentId,
   }) {
     return _firestore
-        .collection('bookings')
-        .doc(bookingId)
-        .collection('payment')
+        .collection('payments')
         .doc(paymentId)
         .snapshots();
   }
@@ -202,40 +198,33 @@ class PaymentFirebaseService {
   }
 
   /// Get user payments
-  /// Returns list of payment documents for a specific user
+  /// Returns list of payment documents for a specific user from separate payments collection
   Future<List<Map<String, dynamic>>> getUserPayments(String userId) async {
     try {
-      // First get all bookings for the user
+      // First get all bookings for the user to get booking IDs
       QuerySnapshot bookingsSnapshot = await _firestore
           .collection('bookings')
           .where('userId', isEqualTo: userId)
           .get();
 
-      List<Map<String, dynamic>> allPayments = [];
+      List<String> bookingIds = bookingsSnapshot.docs.map((doc) => doc.id).toList();
 
-      // Then get payments for each booking
-      for (QueryDocumentSnapshot bookingDoc in bookingsSnapshot.docs) {
-        QuerySnapshot paymentsSnapshot = await _firestore
-            .collection('bookings')
-            .doc(bookingDoc.id)
-            .collection('payment')
-            .orderBy('createdAt', descending: true)
-            .get();
-
-        for (QueryDocumentSnapshot paymentDoc in paymentsSnapshot.docs) {
-          final paymentData = paymentDoc.data() as Map<String, dynamic>;
-          paymentData['bookingId'] = bookingDoc.id;
-          allPayments.add(paymentData);
-        }
+      if (bookingIds.isEmpty) {
+        return [];
       }
 
-      // Sort by creation date
-      allPayments.sort((a, b) {
-        final aTime = a['createdAt'] as Timestamp?;
-        final bTime = b['createdAt'] as Timestamp?;
-        if (aTime == null || bTime == null) return 0;
-        return bTime.compareTo(aTime);
-      });
+      // Get all payments for these bookings
+      QuerySnapshot paymentsSnapshot = await _firestore
+          .collection('payments')
+          .where('bookingId', whereIn: bookingIds)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      List<Map<String, dynamic>> allPayments = [];
+      for (QueryDocumentSnapshot paymentDoc in paymentsSnapshot.docs) {
+        final paymentData = paymentDoc.data() as Map<String, dynamic>;
+        allPayments.add(paymentData);
+      }
 
       return allPayments;
     } catch (e) {
@@ -252,37 +241,31 @@ class PaymentFirebaseService {
   }
 
   /// Stream user payments (real-time updates)
-  /// Returns stream of payment documents for a specific user
+  /// Returns stream of payment documents for a specific user from separate payments collection
   Stream<List<Map<String, dynamic>>> getUserPaymentsStream(String userId) {
     return _firestore
         .collection('bookings')
         .where('userId', isEqualTo: userId)
         .snapshots()
         .asyncMap((bookingsSnapshot) async {
-      List<Map<String, dynamic>> allPayments = [];
+      List<String> bookingIds = bookingsSnapshot.docs.map((doc) => doc.id).toList();
 
-      for (QueryDocumentSnapshot bookingDoc in bookingsSnapshot.docs) {
-        QuerySnapshot paymentsSnapshot = await _firestore
-            .collection('bookings')
-            .doc(bookingDoc.id)
-            .collection('payment')
-            .orderBy('createdAt', descending: true)
-            .get();
-
-        for (QueryDocumentSnapshot paymentDoc in paymentsSnapshot.docs) {
-          final paymentData = paymentDoc.data() as Map<String, dynamic>;
-          paymentData['bookingId'] = bookingDoc.id;
-          allPayments.add(paymentData);
-        }
+      if (bookingIds.isEmpty) {
+        return <Map<String, dynamic>>[];
       }
 
-      // Sort by creation date
-      allPayments.sort((a, b) {
-        final aTime = a['createdAt'] as Timestamp?;
-        final bTime = b['createdAt'] as Timestamp?;
-        if (aTime == null || bTime == null) return 0;
-        return bTime.compareTo(aTime);
-      });
+      // Get all payments for these bookings
+      QuerySnapshot paymentsSnapshot = await _firestore
+          .collection('payments')
+          .where('bookingId', whereIn: bookingIds)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      List<Map<String, dynamic>> allPayments = [];
+      for (QueryDocumentSnapshot paymentDoc in paymentsSnapshot.docs) {
+        final paymentData = paymentDoc.data() as Map<String, dynamic>;
+        allPayments.add(paymentData);
+      }
 
       return allPayments;
     });
@@ -297,34 +280,37 @@ class PaymentFirebaseService {
   }
 
   /// Delete payment details
-  /// Removes payment document from bookings/{bookingId}/payment/{paymentId}
+  /// Removes payment document from separate payments collection and clears paymentId from booking
   Future<void> deletePaymentDetails({
     required String bookingId,
     required String paymentId,
   }) async {
     try {
+      // Delete payment from payments collection
       await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
           .doc(paymentId)
           .delete();
+
+      // Clear paymentId from booking document
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'paymentId': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       throw Exception('Failed to delete payment details: $e');
     }
   }
 
   /// Check if payment exists
-  /// Returns true if payment document exists
+  /// Returns true if payment document exists in separate payments collection
   Future<bool> paymentExists({
     required String bookingId,
     required String paymentId,
   }) async {
     try {
       DocumentSnapshot doc = await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
           .doc(paymentId)
           .get();
       return doc.exists;
@@ -334,13 +320,12 @@ class PaymentFirebaseService {
   }
 
   /// Get payment count for booking
-  /// Returns number of payments for a specific booking
+  /// Returns number of payments for a specific booking from separate payments collection
   Future<int> getBookingPaymentCount(String bookingId) async {
     try {
       QuerySnapshot querySnapshot = await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
+          .where('bookingId', isEqualTo: bookingId)
           .get();
       return querySnapshot.docs.length;
     } catch (e) {
@@ -349,13 +334,12 @@ class PaymentFirebaseService {
   }
 
   /// Get total payment amount for booking
-  /// Returns sum of all successful payments for a booking
+  /// Returns sum of all successful payments for a booking from separate payments collection
   Future<double> getBookingTotalPaid(String bookingId) async {
     try {
       QuerySnapshot querySnapshot = await _firestore
-          .collection('bookings')
-          .doc(bookingId)
-          .collection('payment')
+          .collection('payments')
+          .where('bookingId', isEqualTo: bookingId)
           .where('status', isEqualTo: PaymentStatus.completed.name)
           .get();
 
