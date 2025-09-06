@@ -16,9 +16,7 @@ import 'package:car_wash_app/features/payment/confirmation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -33,11 +31,7 @@ class MyApp extends StatelessWidget {
         builder: (context, authProvider, _) {
           if (authProvider.isLoading) {
             return MaterialApp(
-              home: Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              ),
+              home: Scaffold(body: Center(child: CircularProgressIndicator())),
             );
           }
 
@@ -46,8 +40,23 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: ThemeMode.system,
-            home: authProvider.isAuthenticated ? const DashboardPage() : const LoginPage(),
-            initialRoute: authProvider.isAuthenticated ? '/dashboard' : '/login',
+            home: authProvider.isAuthenticated
+                ? const DashboardPage()
+                : const LoginPage(),
+            initialRoute: authProvider.isAuthenticated
+                ? '/dashboard'
+                : '/login',
+            onGenerateRoute: (settings) {
+              switch (settings.name) {
+                case '/payment':
+                  final args = settings.arguments as Map<String, dynamic>;
+                  return MaterialPageRoute(
+                    builder: (_) => PaymentPage(bookingId: args['bookingId']),
+                  );
+                default:
+                  return MaterialPageRoute(builder: (_) => const LoginPage());
+              }
+            },
             routes: <String, WidgetBuilder>{
               '/login': (_) => const LoginPage(),
               '/signup': (_) => const SignUpPage(),
@@ -56,7 +65,6 @@ class MyApp extends StatelessWidget {
               '/car-details': (_) => const CarDetailsPage(),
               '/dashboard': (_) => const DashboardPage(),
               '/slot-selection': (_) => const SlotSelectionPage(),
-              '/payment': (_) => const PaymentPage(),
               '/confirmation': (_) => const ConfirmationPage(),
             },
           );
@@ -65,4 +73,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
