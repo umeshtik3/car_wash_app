@@ -13,6 +13,7 @@ import 'package:car_wash_app/features/dashboard/dashboard.dart';
 import 'package:car_wash_app/features/slot_selection/slot_selection.dart';
 import 'package:car_wash_app/features/payment/payment.dart';
 import 'package:car_wash_app/features/payment/confirmation.dart';
+import 'package:car_wash_app/features/bookings/my_bookings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +66,7 @@ class MyApp extends StatelessWidget {
               '/car-details': (_) => const CarDetailsPage(),
               '/dashboard': (_) => const DashboardPage(),
               '/slot-selection': (_) => const SlotSelectionPage(),
+              '/my-bookings': (_) => const MyBookingsPage(),
               '/confirmation': (_) => const ConfirmationPage(),
             },
           );

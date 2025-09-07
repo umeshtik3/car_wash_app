@@ -826,4 +826,57 @@ class BookingFirebaseService {
     }
     return getUserTempBookingIdsStream(currentUser!.uid);
   }
+
+  /// Get pending bookings with payment status pending for a user
+  Future<List<Map<String, dynamic>>> getUserPendingBookings(String userId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: 'pending')
+          .where('paymentStatus', isEqualTo: 'pending')
+          .orderBy('bookingDate', descending: false)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get user pending bookings: $e');
+    }
+  }
+
+  /// Get pending bookings with payment status pending for current user
+  Future<List<Map<String, dynamic>>> getCurrentUserPendingBookings() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await getUserPendingBookings(currentUser!.uid);
+  }
+
+  /// Check if user has any pending bookings
+  Future<bool> hasUserPendingBookings(String userId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: 'pending')
+          .where('paymentStatus', isEqualTo: 'pending')
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      throw Exception('Failed to check user pending bookings: $e');
+    }
+  }
+
+  /// Check if current user has any pending bookings
+  Future<bool> hasCurrentUserPendingBookings() async {
+    if (currentUser == null) {
+      throw Exception('No authenticated user found');
+    }
+    return await hasUserPendingBookings(currentUser!.uid);
+  }
 }

@@ -24,9 +24,51 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _checkPendingBookings();
     _fetchServices();
     _loadUserProfile();
     _loadSelectedServices();
+  }
+
+  Future<void> _checkPendingBookings() async {
+    try {
+      final hasPending = await _bookingService.hasCurrentUserPendingBookings();
+      if (hasPending && mounted) {
+        // Show dialog to user about pending bookings
+        _showPendingBookingsDialog();
+      }
+    } catch (e) {
+      // Silently handle error - don't block the dashboard
+      print('Error checking pending bookings: $e');
+    }
+  }
+
+  void _showPendingBookingsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Pending Bookings'),
+        content: const Text(
+          'You have pending bookings that require payment. Would you like to view and complete them first?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Continue Booking'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/my-bookings');
+            },
+            child: const Text('View Bookings'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadUserProfile() async {
@@ -133,6 +175,24 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Car Wash Services'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pushNamed('/my-bookings'),
+            icon: const Icon(Icons.event_note),
+            tooltip: 'My Bookings',
+          ),
+          IconButton(
+            onPressed: _logout,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),

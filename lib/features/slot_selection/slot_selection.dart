@@ -6,7 +6,9 @@ import 'package:car_wash_app/services/service_firebase_service.dart';
 import 'package:car_wash_app/services/car_firebase_service.dart';
 
 class SlotSelectionPage extends StatefulWidget {
-  const SlotSelectionPage({super.key});
+  final String? editingBookingId;
+  
+  const SlotSelectionPage({super.key, this.editingBookingId});
 
   @override
   State<SlotSelectionPage> createState() => _SlotSelectionPageState();
@@ -41,6 +43,54 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
     // Fetch selected services and user cars when page loads
     _fetchSelectedServices();
     _fetchUserCars();
+    
+    // If editing an existing booking, load its data
+    if (widget.editingBookingId != null) {
+      _loadExistingBooking();
+    }
+  }
+
+  Future<void> _loadExistingBooking() async {
+    if (widget.editingBookingId == null) return;
+    
+    try {
+      final booking = await _bookingService.getBookingDetails(widget.editingBookingId!);
+      if (booking != null && mounted) {
+        // Set the existing date and time
+        final bookingDate = booking['bookingDate'] as String?;
+        final timeSlot = booking['timeSlot'] as String?;
+        final carId = booking['carId'] as String?;
+        
+        if (bookingDate != null) {
+          _selectedDate = DateTime.parse(bookingDate);
+        }
+        
+        if (timeSlot != null) {
+          // Extract start time from time slot (e.g., "09:00-10:00" -> "09:00")
+          _selectedTime = timeSlot.split('-')[0];
+        }
+        
+        if (carId != null) {
+          // Find and select the car
+          final car = _userCars.firstWhere(
+            (car) => car['carId'] == carId,
+            orElse: () => _userCars.isNotEmpty ? _userCars.first : {},
+          );
+          _selectedCar = car;
+        }
+        
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load booking details: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime date) {
@@ -203,7 +253,7 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
     }
   }
 
-  /// Create actual booking with selected services, car, date and time
+  /// Create or update booking with selected services, car, date and time
   Future<void> _createBooking() async {
     if (_selectedDate == null || _selectedTime == null || _selectedCar == null) return;
     
@@ -218,21 +268,36 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
       // Get selected service IDs
       final List<String> selectedServiceIds = _selectedServices.map((s) => s['id'] as String).toList();
       
-      // Create actual booking in standalone collection
-      final String bookingId = await _bookingService.createCurrentUserBooking(
-        carId: _selectedCar!['carId'] as String,
-        selectedServices: selectedServiceIds,
-        totalPrice: _totalPrice,
-        bookingDate: dateStr,
-        timeSlot: timeSlot,
-        specialInstructions: '',
-        paymentMethod: '',
-        location: '',
-      );
+      String bookingId;
       
-      // Clear temporary booking data after successful creation
-      await _bookingService.clearCurrentUserSelectedServices();
-      await _bookingService.clearCurrentUserBookingSchedule();
+      if (widget.editingBookingId != null) {
+        // Update existing booking
+        await _bookingService.updateBooking(
+          bookingId: widget.editingBookingId!,
+          carId: _selectedCar!['carId'] as String,
+          selectedServices: selectedServiceIds,
+          totalPrice: _totalPrice,
+          bookingDate: dateStr,
+          timeSlot: timeSlot,
+        );
+        bookingId = widget.editingBookingId!;
+      } else {
+        // Create new booking
+        bookingId = await _bookingService.createCurrentUserBooking(
+          carId: _selectedCar!['carId'] as String,
+          selectedServices: selectedServiceIds,
+          totalPrice: _totalPrice,
+          bookingDate: dateStr,
+          timeSlot: timeSlot,
+          specialInstructions: '',
+          paymentMethod: '',
+          location: '',
+        );
+        
+        // Clear temporary booking data after successful creation
+        await _bookingService.clearCurrentUserSelectedServices();
+        await _bookingService.clearCurrentUserBookingSchedule();
+      }
       
       setState(() {
         _isLoading = false;
@@ -324,6 +389,12 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
   Widget build(BuildContext context) {
     final String dateDisplay = _selectedDate != null ? _formatDate(_selectedDate!) : '';
     return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.editingBookingId != null ? 'Modify Booking' : 'Select Time Slot'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
