@@ -54,8 +54,12 @@ class PaymentService {
         'email': customerEmail,
         'name': customerName,
       },
-      'external': {
-        'wallets': ['paytm']
+      'theme': {
+        'color': '#007bff'
+      },
+      'notes': {
+        'booking_id': orderId,
+        'service': 'Car Wash Service'
       }
     };
 
@@ -72,9 +76,26 @@ class PaymentService {
       throw PaymentException('Razorpay is not initialized');
     }
     
+    // Validate required options
+    if (!options.containsKey('key') || options['key'] == null) {
+      throw PaymentException('Razorpay key is missing');
+    }
+    
+    if (!options.containsKey('amount') || options['amount'] == null) {
+      throw PaymentException('Payment amount is missing');
+    }
+    
+    if (!options.containsKey('order_id') || options['order_id'] == null) {
+      throw PaymentException('Order ID is missing');
+    }
+    
+    // Log options for debugging
+    print('Razorpay Options: $options');
+    
     try {
       _razorpay!.open(options);
     } catch (e) {
+      print('Razorpay Error: $e');
       throw PaymentException('Failed to open payment gateway: $e');
     }
   }
@@ -165,6 +186,16 @@ class PaymentService {
   /// Check if online payments are supported on current platform
   bool isOnlinePaymentSupported() {
     return !kIsWeb;
+  }
+
+  /// Validate Razorpay key format
+  bool isValidRazorpayKey(String key) {
+    return key.startsWith('rzp_') && key.length > 10;
+  }
+
+  /// Get current Razorpay key (for debugging)
+  String getRazorpayKey() {
+    return _razorpayKeyId;
   }
 
   /// Get payment method display name

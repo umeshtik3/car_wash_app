@@ -162,9 +162,22 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
+    // Validate Razorpay key
+    final razorpayKey = _paymentService.getRazorpayKey();
+    if (!_paymentService.isValidRazorpayKey(razorpayKey)) {
+      _showErrorDialog('Invalid Razorpay configuration. Please contact support.');
+      return;
+    }
+
     final String bookingId = widget.bookingId;
     final double amount = _totalAmount;
     const String currency = 'INR';
+
+    // Validate amount
+    if (amount <= 0) {
+      _showErrorDialog('Invalid payment amount. Please try again.');
+      return;
+    }
 
     final orderId = _paymentService.generateOrderId();
     
@@ -172,6 +185,11 @@ class _PaymentPageState extends State<PaymentPage> {
     final String customerName = _bookingData!['customerName'] ?? 'Customer';
     final String customerEmail = _bookingData!['customerEmail'] ?? 'customer@example.com';
     final String customerPhone = _bookingData!['customerPhone'] ?? '+919876543210';
+    
+    print('Processing payment:');
+    print('Amount: $amount');
+    print('Order ID: $orderId');
+    print('Customer: $customerName ($customerEmail)');
     
     final options = _paymentService.createOnlinePaymentOptions(
       orderId: orderId,
@@ -240,7 +258,25 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   void _handlePaymentError(RazorpayPaymentFailureResponse response) {
-    _showErrorDialog('Payment failed: ${response.description}');
+    String errorMessage = 'Payment failed: ${response.description}';
+    
+    // Add more specific error handling for common issues
+    if (response.code == 'BAD_REQUEST_ERROR') {
+      errorMessage = 'Invalid payment request. Please check your payment details and try again.';
+    } else if (response.code == 'NETWORK_ERROR') {
+      errorMessage = 'Network error. Please check your internet connection and try again.';
+    } else if (response.code == 'INVALID_AMOUNT') {
+      errorMessage = 'Invalid payment amount. Please contact support.';
+    }
+    
+    print('Razorpay Payment Error:');
+    print('Code: ${response.code}');
+    print('Description: ${response.description}');
+    print('Source: ${response.source}');
+    print('Step: ${response.step}');
+    print('Reason: ${response.reason}');
+    
+    _showErrorDialog(errorMessage);
   }
 
   void _showSuccessDialog(String message) {
