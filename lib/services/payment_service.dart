@@ -130,19 +130,19 @@ class PaymentService {
   }
 
   /// Handle successful payment
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+  void _handlePaymentSuccess(RazorpayPaymentSuccessResponse response) {
     // This will be handled by the calling widget
     // The response contains payment details
   }
 
   /// Handle payment error
-  void _handlePaymentError(PaymentFailureResponse response) {
+  void _handlePaymentError(RazorpayPaymentFailureResponse response) {
     // This will be handled by the calling widget
     // The response contains error details
   }
 
   /// Handle external wallet selection
-  void _handleExternalWallet(ExternalWalletResponse response) {
+  void _handleExternalWallet(RazorpayExternalWalletResponse response) {
     // This will be handled by the calling widget
     // The response contains wallet details
   }
