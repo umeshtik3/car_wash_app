@@ -1,3 +1,4 @@
+import 'package:car_wash_app/features/dashboard/testing_payment.dart';
 import 'package:car_wash_app/features/profile/profile_view.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -52,7 +53,7 @@ class MyApp extends StatelessWidget {
                 case '/payment':
                   final args = settings.arguments as Map<String, dynamic>;
                   return MaterialPageRoute(
-                    builder: (_) => PaymentPage(bookingId: args['bookingId']),
+                    builder: (_) => TestingPaymentPage(bookingId: args['bookingId']),
                   );
                 default:
                   return MaterialPageRoute(builder: (_) => const LoginPage());
