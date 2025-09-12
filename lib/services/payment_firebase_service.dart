@@ -1,6 +1,6 @@
+import 'package:car_wash_app/features/payment/payment_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'payment_service.dart';
 
 /// Firebase service for payment-related Firestore operations
 /// Handles all database operations for payments, separate from core payment logic
@@ -15,7 +15,7 @@ class PaymentFirebaseService {
   /// Creates document in separate payments collection and updates booking with paymentID
   Future<void> savePaymentDetails({
     required String bookingId,
-    required PaymentResult paymentResult,
+    required PaymentBookingResult paymentResult,
   }) async {
     try {
       // Save payment in separate payments collection
@@ -69,7 +69,7 @@ class PaymentFirebaseService {
 
   /// Get payment details from Firestore
   /// Retrieves payment document from separate payments collection
-  Future<PaymentResult?> getPaymentDetails({
+  Future<PaymentBookingResult?> getPaymentDetails({
     required String bookingId,
     required String paymentId,
   }) async {
@@ -81,7 +81,7 @@ class PaymentFirebaseService {
 
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        return PaymentResult.fromMap(data);
+        return PaymentBookingResult.fromMap(data);
       }
       return null;
     } catch (e) {
@@ -91,7 +91,7 @@ class PaymentFirebaseService {
 
   /// Get all payments for a booking
   /// Returns list of payment documents from separate payments collection filtered by bookingId
-  Future<List<PaymentResult>> getBookingPayments(String bookingId) async {
+  Future<List<PaymentBookingResult>> getBookingPayments(String bookingId) async {
     try {
       QuerySnapshot querySnapshot = await _firestore
           .collection('payments')
@@ -100,7 +100,7 @@ class PaymentFirebaseService {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => PaymentResult.fromMap(doc.data() as Map<String, dynamic>))
+          .map((doc) => PaymentBookingResult.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Failed to get booking payments: $e');

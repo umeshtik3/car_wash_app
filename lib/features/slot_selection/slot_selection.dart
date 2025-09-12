@@ -305,7 +305,7 @@ class _SlotSelectionPageState extends State<SlotSelectionPage> {
       
       if (mounted) {
         // Navigate to payment with booking ID
-        Navigator.of(context).pushNamed('/payment', arguments: {'bookingId': bookingId});
+        Navigator.of(context).pushNamed('/my-bookings', arguments: {'bookingId': bookingId});
       }
     } catch (e) {
       setState(() {

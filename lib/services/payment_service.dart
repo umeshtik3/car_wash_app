@@ -33,7 +33,7 @@ class PaymentService {
   /// Process online payment using Razorpay
   /// Returns payment options for Razorpay
   Map<String, dynamic> createOnlinePaymentOptions({
-    required String orderId,
+  
     required double amount,
     required String currency,
     required String description,
@@ -48,7 +48,6 @@ class PaymentService {
       'amount': (amount * 100).toInt(), // Convert to paise
       'name': 'Car Wash App',
       'description': description,
-      'order_id': orderId,
       'prefill': {
         'contact': customerPhone,
         'email': customerEmail,
@@ -58,7 +57,6 @@ class PaymentService {
         'color': '#007bff'
       },
       'notes': {
-        'booking_id': orderId,
         'service': 'Car Wash Service'
       }
     };
@@ -90,12 +88,10 @@ class PaymentService {
     }
     
     // Log options for debugging
-    print('Razorpay Options: $options');
     
     try {
       _razorpay!.open(options);
     } catch (e) {
-      print('Razorpay Error: $e');
       throw PaymentException('Failed to open payment gateway: $e');
     }
   }
@@ -123,13 +119,13 @@ class PaymentService {
 
   /// Process cash payment (COD)
   /// Returns payment result for cash payment
-  PaymentResult processCashPayment({
+  PaymentResultNow processCashPayment({
     required String bookingId,
     required double amount,
     required String currency,
   }) {
     // Simulate cash payment processing
-    return PaymentResult(
+    return PaymentResultNow(
       success: true,
       paymentId: 'CASH_${DateTime.now().millisecondsSinceEpoch}',
       amount: amount,
@@ -228,7 +224,7 @@ class PaymentService {
 }
 
 /// Payment result model
-class PaymentResult {
+class PaymentResultNow {
   final bool success;
   final String paymentId;
   final double amount;
@@ -240,7 +236,7 @@ class PaymentResult {
   final String? razorpayPaymentId;
   final String? razorpaySignature;
 
-  PaymentResult({
+  PaymentResultNow({
     required this.success,
     required this.paymentId,
     required this.amount,
@@ -269,8 +265,8 @@ class PaymentResult {
     };
   }
 
-  factory PaymentResult.fromMap(Map<String, dynamic> map) {
-    return PaymentResult(
+  factory PaymentResultNow.fromMap(Map<String, dynamic> map) {
+    return PaymentResultNow(
       success: map['success'] ?? false,
       paymentId: map['paymentId'] ?? '',
       amount: (map['amount'] ?? 0).toDouble(),
