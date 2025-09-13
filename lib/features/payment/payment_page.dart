@@ -5,14 +5,14 @@ import 'package:car_wash_app/services/service_firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-class PaymentPage extends StatefulWidget {
+class PaymentModal extends StatefulWidget {
   final String bookingId;
-  const PaymentPage({super.key, required this.bookingId});
+  const PaymentModal({super.key, required this.bookingId});
   @override
-  _PaymentPageState createState() => _PaymentPageState();
+  _PaymentModalState createState() => _PaymentModalState();
 }
 
-class _PaymentPageState extends State<PaymentPage> {
+class _PaymentModalState extends State<PaymentModal> {
   late Razorpay _razorpay;
   // Booking data
   Map<String, dynamic>? _bookingData;
@@ -169,13 +169,14 @@ class _PaymentPageState extends State<PaymentPage> {
         title: const Text('Success'),
         content: Text(message),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/confirmation');
-            },
-            child: const Text('OK'),
-          ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close modal
+                Navigator.of(context).pop(); // Close any parent dialogs
+                Navigator.of(context).pushNamed('/confirmation');
+              },
+              child: const Text('OK'),
+            ),
         ],
       ),
     );
@@ -184,25 +185,105 @@ class _PaymentPageState extends State<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Row(
-          children: [
-            ElevatedButton.icon(
-                                  onPressed: () => _processCashPayment(),
-                                  icon: const Icon(Icons.payment, size: 16),
-                                  label: const Text('Pay Later'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-            ElevatedButton(
-              onPressed: _openCheckout,
-              child: Text("Pay with Razorpay"),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Payment Options',
+                style: context.text.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          
+          // Booking summary
+          if (_bookingData != null) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Booking Summary',
+                    style: context.text.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Booking #${_bookingData!['id'].toString().substring(0, 8)}',
+                    style: context.text.bodyMedium,
+                  ),
+                  Text(
+                    'Total Amount: ₹$_totalAmount',
+                    style: context.text.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          
+          // Payment buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _processCashPayment(),
+                  icon: const Icon(Icons.payment, size: 16),
+                  label: const Text('Pay Later'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _openCheckout,
+                  icon: const Icon(Icons.credit_card, size: 16),
+                  label: const Text('Pay Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: AppSpacing.md),
+        ],
       ),
     );
   }

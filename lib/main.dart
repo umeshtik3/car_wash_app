@@ -49,11 +49,11 @@ class MyApp extends StatelessWidget {
                 : '/login',
             onGenerateRoute: (settings) {
               switch (settings.name) {
-                case '/payment':
-                  final args = settings.arguments as Map<String, dynamic>;
-                  return MaterialPageRoute(
-                    builder: (_) => PaymentPage(bookingId: args['bookingId']),
-                  );
+                  case '/payment':
+                    final args = settings.arguments as Map<String, dynamic>;
+                    return MaterialPageRoute(
+                      builder: (_) => PaymentModal(bookingId: args['bookingId']),
+                    );
                 default:
                   return MaterialPageRoute(builder: (_) => const LoginPage());
 

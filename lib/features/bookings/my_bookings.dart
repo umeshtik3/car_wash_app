@@ -4,6 +4,7 @@ import 'package:car_wash_app/services/booking_firebase_service.dart';
 import 'package:car_wash_app/services/service_firebase_service.dart';
 import 'package:car_wash_app/services/car_firebase_service.dart';
 import 'package:car_wash_app/features/slot_selection/slot_selection.dart';
+import 'package:car_wash_app/features/payment/payment_page.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -105,9 +106,15 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
   }
 
   Future<void> _proceedToPayment(String bookingId) async {
-    Navigator.of(
-      context,
-    ).pushNamed('/payment', arguments: {'bookingId': bookingId});
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PaymentModal(bookingId: bookingId),
+    ).then((_) {
+      // Refresh bookings when modal is closed (in case payment was successful)
+      _loadPendingBookings();
+    });
   }
 
   Future<void> _modifyBooking(String bookingId) async {
