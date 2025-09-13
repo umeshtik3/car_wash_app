@@ -202,59 +202,60 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // User welcome section
-                if (_userProfile != null) ...[
-                  AppCard(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).pushNamed('/profile-view'),
-                          child: CircleAvatar(
-                            radius: 24,
-                            backgroundColor: AppColors.secondary,
-                            child: Text(
-                              _userProfile!['name']?.substring(0, 1).toUpperCase() ?? 'U',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome back!',
-                                style: context.text.bodySmall?.copyWith(
-                                  color: Theme.of(context).hintColor,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => Navigator.of(context).pushNamed('/profile-view'),
-                                child: Text(
-                                  _userProfile!['name'] ?? 'User',
-                                  style: context.text.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: Text('Services', style: context.text.titleLarge),
-                ),
+                // if (_userProfile != null) ...[
+                //   AppCard(
+                //     padding: const EdgeInsets.all(AppSpacing.lg),
+                //     child: Row(
+                //       children: [
+                //         GestureDetector(
+                //           onTap: () => Navigator.of(context).pushNamed('/profile-view'),
+                //           child: CircleAvatar(
+                //             radius: 24,
+                //             backgroundColor: AppColors.secondary,
+                //             child: Text(
+                //               _userProfile!['name']?.substring(0, 1).toUpperCase() ?? 'U',
+                //               style: const TextStyle(
+                //                 fontSize: 18,
+                //                 fontWeight: FontWeight.bold,
+                //                 color: Colors.white,
+                //               ),
+                //             ),
+                //           ),
+                //         ),
+                //         const SizedBox(width: AppSpacing.md),
+                //         Expanded(
+                //           child: Column(
+                //             crossAxisAlignment: CrossAxisAlignment.start,
+                //             children: [
+                //               Text(
+                //                 'Welcome back!',
+                //                 style: context.text.bodySmall?.copyWith(
+                //                   color: Theme.of(context).hintColor,
+                //                 ),
+                //               ),
+                //               GestureDetector(
+                //                 onTap: () => Navigator.of(context).pushNamed('/profile-view'),
+                //                 child: Text(
+                //                   _userProfile!['name'] ?? 'User',
+                //                   style: context.text.titleMedium?.copyWith(
+                //                     fontWeight: FontWeight.bold,
+                //                     color: AppColors.primary,
+                //                   ),
+                //                 ),
+                //               ),
+                //             ],
+                //           ),
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                //   const SizedBox(height: AppSpacing.md),
+                // ],
+             
+                // Padding(
+                //   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                //   child: Text('Services', style: context.text.titleLarge),
+                // ),
                 const SizedBox(height: AppSpacing.md),
                 AppCard(
                   padding: const EdgeInsets.all(AppSpacing.xl),
@@ -284,7 +285,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             crossAxisCount: 2,
                             mainAxisSpacing: AppSpacing.md,
                             crossAxisSpacing: AppSpacing.md,
-                            childAspectRatio: 1,
+                            childAspectRatio: 0.8,
                           ),
                           itemCount: _services.length,
                           itemBuilder: (BuildContext context, int index) {
@@ -325,12 +326,6 @@ class _DashboardPageState extends State<DashboardPage> {
                                     ),
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    'Tap to select', 
-                                    style: context.text.bodySmall?.copyWith(
-                                      color: Theme.of(context).hintColor,
-                                    ),
-                                  ),
                                 ],
                               ),
                             );

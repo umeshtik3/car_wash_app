@@ -104,19 +104,28 @@ class BookingFirebaseService {
 
       // Only update fields that are provided
       if (carId != null && carId.isNotEmpty) updateData['carId'] = carId;
-      if (selectedServices != null) updateData['selectedServices'] = selectedServices;
+      if (selectedServices != null)
+        updateData['selectedServices'] = selectedServices;
       if (totalPrice != null) updateData['totalPrice'] = totalPrice;
-      if (bookingDate != null && bookingDate.isNotEmpty) updateData['bookingDate'] = bookingDate;
-      if (timeSlot != null && timeSlot.isNotEmpty) updateData['timeSlot'] = timeSlot;
+      if (bookingDate != null && bookingDate.isNotEmpty)
+        updateData['bookingDate'] = bookingDate;
+      if (timeSlot != null && timeSlot.isNotEmpty)
+        updateData['timeSlot'] = timeSlot;
       if (status != null && status.isNotEmpty) updateData['status'] = status;
-      if (paymentStatus != null && paymentStatus.isNotEmpty) updateData['paymentStatus'] = paymentStatus;
+      if (paymentStatus != null && paymentStatus.isNotEmpty)
+        updateData['paymentStatus'] = paymentStatus;
       if (paymentMethod != null) updateData['paymentMethod'] = paymentMethod;
-      if (specialInstructions != null) updateData['specialInstructions'] = specialInstructions;
+      if (specialInstructions != null)
+        updateData['specialInstructions'] = specialInstructions;
       if (assignedStaff != null) updateData['assignedStaff'] = assignedStaff;
       if (location != null) updateData['location'] = location;
 
-      if (updateData.length > 1) { // More than just updatedAt
-        await _firestore.collection('bookings').doc(bookingId).update(updateData);
+      if (updateData.length > 1) {
+        // More than just updatedAt
+        await _firestore
+            .collection('bookings')
+            .doc(bookingId)
+            .update(updateData);
       }
     } catch (e) {
       throw Exception('Failed to update booking: $e');
@@ -143,7 +152,10 @@ class BookingFirebaseService {
   }
 
   /// Update payment status
-  Future<void> updatePaymentStatus(String bookingId, String paymentStatus) async {
+  Future<void> updatePaymentStatus(
+    String bookingId,
+    String paymentStatus,
+  ) async {
     try {
       await _firestore.collection('bookings').doc(bookingId).update({
         'paymentStatus': paymentStatus,
@@ -217,7 +229,10 @@ class BookingFirebaseService {
   /// Get specific booking details
   Future<Map<String, dynamic>?> getBookingDetails(String bookingId) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('bookings').doc(bookingId).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
 
       if (doc.exists) {
         return doc.data() as Map<String, dynamic>;
@@ -273,11 +288,14 @@ class BookingFirebaseService {
   Future<void> cancelBooking(String bookingId) async {
     try {
       // Get booking details to find userId
-      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      final bookingDoc = await _firestore
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
       if (!bookingDoc.exists) {
         throw Exception('Booking not found');
       }
-      
+
       final bookingData = bookingDoc.data() as Map<String, dynamic>;
       final userId = bookingData['userId'] as String;
 
@@ -298,11 +316,14 @@ class BookingFirebaseService {
   Future<void> deleteBooking(String bookingId) async {
     try {
       // Get booking details to find userId
-      final bookingDoc = await _firestore.collection('bookings').doc(bookingId).get();
+      final bookingDoc = await _firestore
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
       if (!bookingDoc.exists) {
         throw Exception('Booking not found');
       }
-      
+
       final bookingData = bookingDoc.data() as Map<String, dynamic>;
       final userId = bookingData['userId'] as String;
 
@@ -341,7 +362,10 @@ class BookingFirebaseService {
   /// Check if booking exists
   Future<bool> bookingExists(String bookingId) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('bookings').doc(bookingId).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
       return doc.exists;
     } catch (e) {
       throw Exception('Failed to check booking existence: $e');
@@ -366,10 +390,14 @@ class BookingFirebaseService {
   }
 
   /// Get upcoming bookings for user
-  Future<List<Map<String, dynamic>>> getUpcomingUserBookings(String userId) async {
+  Future<List<Map<String, dynamic>>> getUpcomingUserBookings(
+    String userId,
+  ) async {
     try {
-      final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
-      
+      final today = DateTime.now().toIso8601String().split(
+        'T',
+      )[0]; // YYYY-MM-DD
+
       QuerySnapshot querySnapshot = await _firestore
           .collection('bookings')
           .where('userId', isEqualTo: userId)
@@ -497,7 +525,7 @@ class BookingFirebaseService {
           .doc('selectedServices');
 
       final doc = await tempBookingRef.get();
-      
+
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         final selectedServiceIds = data['selectedServiceIds'] as List<dynamic>?;
@@ -654,7 +682,7 @@ class BookingFirebaseService {
           .doc('bookingSchedule');
 
       final doc = await tempBookingRef.get();
-      
+
       if (doc.exists) {
         return doc.data() as Map<String, dynamic>;
       }
@@ -717,7 +745,10 @@ class BookingFirebaseService {
 
   /// Add bookingId to user's temp_booking collection
   /// Updates users/{userId}/tempBooking/bookingIds array
-  Future<void> _addBookingIdToUserTempBooking(String userId, String bookingId) async {
+  Future<void> _addBookingIdToUserTempBooking(
+    String userId,
+    String bookingId,
+  ) async {
     try {
       final tempBookingRef = _firestore
           .collection('users')
@@ -736,7 +767,10 @@ class BookingFirebaseService {
 
   /// Remove bookingId from user's temp_booking collection
   /// Updates users/{userId}/tempBooking/bookingIds array
-  Future<void> _removeBookingIdFromUserTempBooking(String userId, String bookingId) async {
+  Future<void> _removeBookingIdFromUserTempBooking(
+    String userId,
+    String bookingId,
+  ) async {
     try {
       final tempBookingRef = _firestore
           .collection('users')
@@ -764,7 +798,7 @@ class BookingFirebaseService {
           .doc('bookingIds');
 
       final doc = await tempBookingRef.get();
-      
+
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         final bookingIds = data['bookingIds'] as List<dynamic>?;
@@ -828,7 +862,9 @@ class BookingFirebaseService {
   }
 
   /// Get pending bookings with payment status pending for a user
-  Future<List<Map<String, dynamic>>> getUserPendingBookings(String userId) async {
+  Future<List<Map<String, dynamic>>> getUserPendingBookings(
+    String userId,
+  ) async {
     try {
       QuerySnapshot querySnapshot = await _firestore
           .collection('bookings')
@@ -862,6 +898,7 @@ class BookingFirebaseService {
           .collection('bookings')
           .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: 'pending')
+          .where('paymentMethod', isNotEqualTo: 'cash')
           .where('paymentStatus', isEqualTo: 'pending')
           .limit(1)
           .get();

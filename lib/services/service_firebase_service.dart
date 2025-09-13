@@ -112,7 +112,6 @@ class ServiceFirebaseService {
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
     } catch (e) {
-      print('Failed to get active services: $e');
       throw Exception('Failed to get active services: $e');
     }
   }

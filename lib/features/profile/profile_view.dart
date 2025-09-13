@@ -309,7 +309,7 @@ class _ProfileViewPageState extends State<ProfileViewPage> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.xl),
               decoration: BoxDecoration(
-                color: Theme.of(context).hintColor.withOpacity(0.1),
+                color: Theme.of(context).hintColor.withValues(alpha: 0.1),
                 borderRadius: AppRadii.medium,
               ),
               child: Column(

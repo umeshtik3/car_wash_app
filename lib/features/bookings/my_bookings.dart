@@ -308,7 +308,9 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   // ignore: deprecated_member_use
-                                  color: AppColors.warning.withValues(alpha: 0.1),
+                                  color: AppColors.warning.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: AppColors.warning),
                                 ),
@@ -322,6 +324,15 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: AppSpacing.sm),
+ Text(
+                               'Payment by: ${ booking['paymentMethod'] == 'cash'
+                                    ? 'Cash'
+                                    : 'Online'}',
+                                style: context.text.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                           const SizedBox(height: AppSpacing.sm),
 
                           // Service Details
